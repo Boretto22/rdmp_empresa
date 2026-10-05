@@ -1,0 +1,20 @@
+{
+  "name": "rdmp-web",
+  "version": "1.0.0",
+  "description": "Web de RDMP — Reparación y Diagnóstico de Maquinaria Pesada",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/servidor.mjs",
+    "imagenes": "node scripts/optimizar-imagenes.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Boretto22/RDMP.git"
+  },
+  "devDependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "sharp": "^0.35.5"
+  }
+}
