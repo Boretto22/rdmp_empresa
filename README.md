@@ -66,7 +66,9 @@ No se ha añadido ninguna imagen externa: solo se usan las adjuntas.
 
 | Original | Uso en la web | Observaciones |
 | --- | --- | --- |
-| `06-bulldozer-cat-d9t-al-atardecer.jpg` | Portada e imagen para redes sociales | Logotipo CAT visible. 735 px de ancho: algo justa para pantallas grandes. |
+| `logo-rdmp-texto.png` | Logotipo en la cabecera y el pie | Logotipo propio de RDMP. |
+| `logo-rdmp-emblema-bulldozer.png` | Emblema al inicio de la portada e imagen al compartir el enlace (`compartir-rdmp-1200x630.jpg`) | Logotipo propio de RDMP. |
+| `06-bulldozer-cat-d9t-al-atardecer.jpg` | Portada | Logotipo CAT visible. 735 px de ancho: algo justa para pantallas grandes. |
 | `02-bulldozer-liebherr-con-ripper-en-roca.jpg` | Servicios | Logotipo Liebherr visible. Hay una persona en la cabina (no se le distingue la cara). |
 | `04-flota-de-bulldozers-cat-alineados.jpg` | Mantenimiento preventivo | Logotipo CAT visible. |
 | `12-pala-minera-komatsu-con-tecnicos.jpg` | Cómo trabajamos | Logotipo Komatsu visible. Aparecen tres personas de espaldas o de lado: confirmar también su consentimiento. |

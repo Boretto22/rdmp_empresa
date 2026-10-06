@@ -15,8 +15,12 @@
   <meta property="og:title" content="RDMP — Reparación y Diagnóstico de Maquinaria Pesada">
   <meta property="og:description" content="Servicio técnico móvil multimarca: diagnóstico, electrónica, sistemas eléctricos, software y mantenimiento preventivo de maquinaria pesada.">
   <meta property="og:url" content="https://rdmpempresa.vercel.app/">
-  <meta property="og:image" content="https://rdmpempresa.vercel.app/assets/img/portada-bulldozer-735.jpg">
-  <meta property="og:image:alt" content="Bulldozer de cadenas sobre terreno removido al atardecer">
+  <meta property="og:image" content="https://rdmpempresa.vercel.app/assets/img/compartir-rdmp-1200x630.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Emblema de RDMP con un bulldozer, montañas y una rueda dentada">
+  <meta name="twitter:image" content="https://rdmpempresa.vercel.app/assets/img/compartir-rdmp-1200x630.jpg">
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="preload" href="assets/fonts/barlow-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -32,7 +36,10 @@
   <header class="cabecera" id="cabecera">
     <div class="contenedor cabecera__fila">
       <a class="marca" href="#inicio" aria-label="RDMP, ir al inicio">
-        <span class="marca__nombre">RDMP</span>
+        <picture>
+          <source type="image/webp" srcset="assets/img/logo-rdmp-200.webp 1x, assets/img/logo-rdmp-400.webp 2x">
+          <img class="marca__logo" src="assets/img/logo-rdmp-200.png" srcset="assets/img/logo-rdmp-400.png 2x" width="200" height="40" alt="RDMP">
+        </picture>
         <span class="marca__lema">Reparación y Diagnóstico<br>de Maquinaria Pesada</span>
       </a>
 
@@ -60,6 +67,12 @@
     <section class="portada" id="inicio" aria-labelledby="titulo-portada">
       <div class="contenedor portada__rejilla">
         <div class="portada__texto">
+          <div class="emblema">
+            <picture>
+              <source type="image/webp" srcset="assets/img/emblema-rdmp-360.webp 360w, assets/img/emblema-rdmp-720.webp 720w" sizes="(min-width: 600px) 300px, 220px">
+              <img src="assets/img/emblema-rdmp-360.png" srcset="assets/img/emblema-rdmp-360.png 360w, assets/img/emblema-rdmp-720.png 720w" sizes="(min-width: 600px) 300px, 220px" width="360" height="240" alt="Emblema de RDMP: un bulldozer delante de unas montañas y una rueda dentada, sobre el nombre RDMP." decoding="async">
+            </picture>
+          </div>
           <p class="antetitulo">Servicio técnico móvil multimarca</p>
           <h1 id="titulo-portada">Diagnóstico y reparación de maquinaria pesada, <span class="resalte">donde trabaja la máquina</span></h1>
           <p class="entradilla">Localizamos y resolvemos averías electrónicas, eléctricas y de software en maquinaria de construcción, obra pública, canteras y minería. Siempre que es posible, nos desplazamos hasta la máquina para evitar traslados innecesarios.</p>
@@ -329,7 +342,13 @@
 
   <footer class="pie">
     <div class="contenedor pie__fila">
-      <p class="pie__marca"><span>RDMP</span> Reparación y Diagnóstico de Maquinaria Pesada</p>
+      <p class="pie__marca">
+        <picture>
+          <source type="image/webp" srcset="assets/img/logo-rdmp-200.webp 1x, assets/img/logo-rdmp-400.webp 2x">
+          <img class="pie__logo" src="assets/img/logo-rdmp-200.png" srcset="assets/img/logo-rdmp-400.png 2x" width="200" height="40" alt="RDMP" loading="lazy" decoding="async">
+        </picture>
+        Reparación y Diagnóstico de Maquinaria Pesada
+      </p>
       <nav aria-label="Secundaria">
         <ul class="pie__enlaces">
           <li><a href="#servicios">Servicios</a></li>

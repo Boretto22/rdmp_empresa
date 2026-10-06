@@ -41,6 +41,32 @@ for (const { origen, nombre, anchos, webp } of SELECCION) {
   console.log(`✔ ${nombre} (${anchos.join(", ")} px)`);
 }
 
+// Logotipos con transparencia: se recorta el margen vacío y se generan 1x/2x en WebP y PNG.
+const LOGOS = [
+  { origen: "logo-rdmp-texto.png", nombre: "logo-rdmp", anchos: [200, 400] },
+  { origen: "logo-rdmp-emblema-bulldozer.png", nombre: "emblema-rdmp", anchos: [360, 720] },
+];
+for (const { origen, nombre, anchos } of LOGOS) {
+  const recortado = await sharp(path.join(ORIGEN, origen)).trim({ threshold: 10 }).toBuffer();
+  for (const ancho of anchos) {
+    const base = sharp(recortado).resize({ width: ancho, withoutEnlargement: true });
+    await base.clone().webp({ quality: 85, alphaQuality: 90, effort: 6 }).toFile(path.join(DESTINO, `${nombre}-${ancho}.webp`));
+    await base.clone().png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(path.join(DESTINO, `${nombre}-${ancho}.png`));
+  }
+  console.log(`✔ ${nombre} (${anchos.join(", ")} px)`);
+}
+
+// Imagen para compartir en redes (1200×630): emblema sobre fondo claro, como en su diseño original.
+const emblema = await sharp(path.join(ORIGEN, "logo-rdmp-emblema-bulldozer.png"))
+  .trim({ threshold: 10 })
+  .resize({ width: 1040, height: 540, fit: "inside" })
+  .toBuffer();
+await sharp({ create: { width: 1200, height: 630, channels: 3, background: "#f2f0eb" } })
+  .composite([{ input: emblema, gravity: "center" }])
+  .jpeg({ quality: 85, mozjpeg: true })
+  .toFile(path.join(DESTINO, "compartir-rdmp-1200x630.jpg"));
+console.log("✔ imagen para compartir 1200×630");
+
 for (const [paquete, archivo] of FUENTES_USADAS) {
   await copyFile(path.join("node_modules", paquete, "files", archivo), path.join(FUENTES, archivo));
 }

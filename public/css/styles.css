@@ -105,10 +105,8 @@ main:focus { outline: none; }
 .cabecera__fila { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; min-height: var(--cabecera); }
 
 .marca { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
-.marca__nombre {
-  font-family: var(--fuente-titulo); font-weight: 800; font-size: 2rem; line-height: 1;
-  letter-spacing: 0.02em; padding-bottom: 2px; border-bottom: 4px solid var(--acento);
-}
+.marca__logo { width: auto; height: 34px; }
+@media (max-width: 420px) { .marca__logo { height: 30px; } }
 .marca__lema { font-size: 0.72rem; line-height: 1.25; text-transform: uppercase; letter-spacing: 0.08em; color: #bdbcb6; }
 
 .navegacion { display: flex; align-items: center; gap: 1.75rem; }
@@ -169,6 +167,14 @@ main:focus { outline: none; }
 }
 .portada__rejilla { display: grid; gap: clamp(2rem, 5vw, 4rem); align-items: center; }
 @media (min-width: 960px) { .portada__rejilla { grid-template-columns: 1fr 1fr; } }
+
+/* Las zonas negras del emblema se pierden sobre el fondo oscuro: un contorno claro tenue mantiene su silueta */
+.emblema { display: inline-block; margin-bottom: 1.75rem; }
+.emblema img {
+  width: 220px; height: auto;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.55)) drop-shadow(0 0 14px rgba(242, 169, 0, 0.18));
+}
+@media (min-width: 600px) { .emblema img { width: 300px; } }
 
 .antetitulo, .etiqueta {
   display: inline-flex; align-items: center; gap: 0.6rem; margin-bottom: 1.1rem;
@@ -369,8 +375,8 @@ main:focus { outline: none; }
    -------------------------------------------------------------------------- */
 .pie { background: var(--negro); border-top: 4px solid var(--acento); padding: 2.5rem 0 2rem; font-size: 0.95rem; }
 .pie__fila { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.25rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--linea-oscura); }
-.pie__marca { margin: 0; color: #bdbcb6; }
-.pie__marca span { font-family: var(--fuente-titulo); font-weight: 800; font-size: 1.6rem; color: var(--blanco); margin-right: 0.5rem; vertical-align: -0.1em; }
+.pie__marca { margin: 0; color: #bdbcb6; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.pie__logo { width: auto; height: 30px; }
 .pie__enlaces { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
 .pie__enlaces a { display: inline-block; padding: 0.5rem 0; color: #d9d7d1; text-decoration: none; }
 .pie__enlaces a:hover { color: var(--blanco); text-decoration: underline; text-decoration-color: var(--acento); }
