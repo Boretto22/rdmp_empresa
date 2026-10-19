@@ -8,6 +8,7 @@
   var zona = limpiar(config.zonaCobertura);
   var destino = limpiar(config.destinoFormulario);
   var claveMaps = limpiar(config.claveMapsGoogle);
+  var mapaId = limpiar(config.mapaIdGoogle) || "DEMO_MAP_ID";
 
   /* ---------------- Navegación móvil ---------------- */
   var boton = document.querySelector(".menu-boton");
@@ -92,20 +93,41 @@
   var enviar = document.getElementById("boton-enviar");
   var modo = destino ? "destino" : (correo ? "correo" : "pendiente");
   var campoMotivo = document.getElementById("f-motivo");
-  var campoUbicacion = document.getElementById("f-ubicacion");
-  var campoCoords = document.getElementById("f-coordenadas");
+  var abrirSelector = document.getElementById("abrir-selector");
+  var cambiarUbicacion = document.getElementById("cambiar-ubicacion");
   var errorUbicacion = document.getElementById("e-ubicacion");
-  var errorCoords = document.getElementById("e-coordenadas");
-  var estadoUbicacion = document.getElementById("estado-ubicacion");
-  var comprobarPunto = document.getElementById("comprobar-punto");
-  var elegirMapa = document.getElementById("elegir-mapa");
-  var puntoMapa = document.getElementById("punto-mapa");
+  var tarjeta = document.getElementById("tarjeta-ubicacion");
+  var tarjetaNombre = document.getElementById("tarjeta-nombre");
+  var tarjetaDireccion = document.getElementById("tarjeta-direccion");
+  var tarjetaCoords = document.getElementById("tarjeta-coords");
+  var avisoMapa = document.getElementById("aviso-mapa");
+  var estadoBusqueda = document.getElementById("estado-busqueda");
+  var estadoGeo = document.getElementById("estado-geo");
+  var resumenPunto = document.getElementById("resumen-punto");
+  var errorCoordsModal = document.getElementById("e-coords-modal");
+  var inputLat = document.getElementById("m-lat");
+  var inputLng = document.getElementById("m-lng");
   var confirmarMapa = document.getElementById("confirmar-mapa");
   var lienzoMapa = document.getElementById("lienzo-mapa");
-  var mapaInstancia = null;
-  var marcadorMapa = null;
-  var puntoElegido = null;
-  var mapsCargando = false;
+  var contenedorBusqueda = document.getElementById("contenedor-busqueda");
+  var campoNombre = document.getElementById("f-lugar-nombre");
+  var campoDireccion = document.getElementById("f-lugar-direccion");
+  var campoLat = document.getElementById("f-latitud");
+  var campoLng = document.getElementById("f-longitud");
+  var campoPlace = document.getElementById("f-place-id");
+
+  var confirmada = null;
+  var provisional = null;
+  var disparador = null;
+  var confirmadoAhora = false;
+  var silenciarCoords = false;
+  var seqGeo = 0;
+  var mapa = null;
+  var marcador = null;
+  var Marcador = null;
+  var geocoder = null;
+  var mapsLista = false;
+  var mapsCargando = null;
 
   function mostrarEstado(tipo, titulo, texto) {
     estado.className = "estado estado--" + tipo;
@@ -184,248 +206,426 @@
     seleccionarMotivo(enlace.getAttribute("data-motivo"));
   });
 
-  /* ---------------- Coordenadas y Google Maps ---------------- */
-  function urlMaps(consulta) {
-    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(consulta);
+  /* ---------------- Selector de ubicación ---------------- */
+  function clonarPunto(p) {
+    if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return null;
+    return {
+      lat: p.lat,
+      lng: p.lng,
+      nombre: p.nombre || "",
+      direccion: p.direccion || "",
+      placeId: p.placeId || "",
+    };
   }
 
-  function formatearPunto(lat, lng) {
-    return Number(lat).toFixed(6) + ", " + Number(lng).toFixed(6);
+  function coordsValidas(lat, lng) {
+    return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   }
 
-  function parsearCoordenadas(texto) {
-    var t = limpiar(texto);
-    if (!t) return null;
-    var m = t.match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*[,;\s]\s*([+-]?(?:\d+(?:\.\d+)?|\.\d+))$/);
-    if (!m) return { error: "formato" };
-    var lat = Number(m[1]);
-    var lng = Number(m[2]);
+  function formatearNumero(n) {
+    return String(Math.round(n * 1000000) / 1000000);
+  }
+
+  function urlMaps(lat, lng) {
+    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(lat + "," + lng);
+  }
+
+  function textoLugar(place) {
+    var n = place && place.displayName;
+    if (!n) return "";
+    return typeof n === "string" ? n : (n.text || "");
+  }
+
+  function leerLatLng(valor) {
+    if (!valor) return null;
+    if (typeof valor.lat === "function") return { lat: valor.lat(), lng: valor.lng() };
+    if (Number.isFinite(valor.lat) && Number.isFinite(valor.lng)) return { lat: valor.lat, lng: valor.lng };
+    return null;
+  }
+
+  function escribirCoords(lat, lng) {
+    silenciarCoords = true;
+    inputLat.value = formatearNumero(lat);
+    inputLng.value = formatearNumero(lng);
+    silenciarCoords = false;
+    inputLat.removeAttribute("aria-invalid");
+    inputLng.removeAttribute("aria-invalid");
+    errorCoordsModal.textContent = "";
+  }
+
+  function pintarResumen() {
+    if (!provisional || !coordsValidas(provisional.lat, provisional.lng)) {
+      resumenPunto.textContent = "Todavía no has marcado ningún punto.";
+      confirmarMapa.disabled = true;
+      return;
+    }
+    var partes = [];
+    if (provisional.nombre) partes.push(provisional.nombre);
+    if (provisional.direccion) partes.push(provisional.direccion);
+    partes.push(formatearNumero(provisional.lat) + ", " + formatearNumero(provisional.lng));
+    resumenPunto.textContent = partes.join(" · ");
+    confirmarMapa.disabled = false;
+  }
+
+  function pintarTarjeta() {
+    if (!confirmada) {
+      tarjeta.hidden = true;
+      abrirSelector.removeAttribute("aria-invalid");
+      return;
+    }
+    tarjeta.hidden = false;
+    tarjetaNombre.textContent = confirmada.nombre || "Punto marcado en el mapa";
+    tarjetaDireccion.textContent = confirmada.direccion
+      ? confirmada.direccion
+      : "Sin dirección postal. La solicitud guardará las coordenadas.";
+    tarjetaCoords.textContent = formatearNumero(confirmada.lat) + ", " + formatearNumero(confirmada.lng);
+    abrirSelector.removeAttribute("aria-invalid");
+    errorUbicacion.textContent = "";
+  }
+
+  function volcarConfirmada() {
+    campoNombre.value = confirmada && confirmada.nombre ? confirmada.nombre : "";
+    campoDireccion.value = confirmada && confirmada.direccion ? confirmada.direccion : "";
+    campoLat.value = confirmada ? String(confirmada.lat) : "";
+    campoLng.value = confirmada ? String(confirmada.lng) : "";
+    campoPlace.value = confirmada && confirmada.placeId ? confirmada.placeId : "";
+    pintarTarjeta();
+  }
+
+  function sincronizarMarcador() {
+    if (!mapa || !window.google) return;
+    if (!provisional || !coordsValidas(provisional.lat, provisional.lng)) {
+      if (marcador) marcador.map = null;
+      return;
+    }
+    var pos = { lat: provisional.lat, lng: provisional.lng };
+    mapa.setCenter(pos);
+    mapa.setZoom(Math.max(mapa.getZoom() || 0, 16));
+    if (!marcador) {
+      marcador = new Marcador({
+        map: mapa,
+        position: pos,
+        gmpDraggable: true,
+        title: "Ubicación de la máquina",
+      });
+      marcador.addListener("dragend", function () {
+        var ll = leerLatLng(marcador.position);
+        if (ll) fijarPuntoLibre(ll.lat, ll.lng);
+      });
+    } else {
+      marcador.map = mapa;
+      marcador.position = pos;
+    }
+  }
+
+  function aplicarVistaProvisional() {
+    if (provisional && coordsValidas(provisional.lat, provisional.lng)) escribirCoords(provisional.lat, provisional.lng);
+    else {
+      silenciarCoords = true;
+      inputLat.value = "";
+      inputLng.value = "";
+      silenciarCoords = false;
+      errorCoordsModal.textContent = "";
+    }
+    pintarResumen();
+    sincronizarMarcador();
+    if (mapa && window.google && window.google.maps && window.google.maps.event) {
+      window.google.maps.event.trigger(mapa, "resize");
+    }
+  }
+
+  function fijarPuntoLibre(lat, lng) {
+    if (!coordsValidas(lat, lng)) return;
+    var id = ++seqGeo;
+    provisional = { lat: lat, lng: lng, nombre: "", direccion: "", placeId: "" };
+    escribirCoords(lat, lng);
+    pintarResumen();
+    sincronizarMarcador();
+    if (!geocoder) return;
+    geocoder.geocode({ location: { lat: lat, lng: lng } }).then(function (respuesta) {
+      if (id !== seqGeo || !provisional) return;
+      if (provisional.lat !== lat || provisional.lng !== lng) return;
+      var resultado = respuesta && respuesta.results && respuesta.results[0];
+      provisional.nombre = "";
+      provisional.direccion = resultado && resultado.formatted_address ? resultado.formatted_address : "";
+      provisional.placeId = resultado && resultado.place_id ? resultado.place_id : "";
+      pintarResumen();
+    }).catch(function () {
+      if (id !== seqGeo || !provisional) return;
+      provisional.direccion = "";
+      provisional.placeId = "";
+      pintarResumen();
+    });
+  }
+
+  function aplicarLugar(place) {
+    var ll = leerLatLng(place.location);
+    if (!ll || !coordsValidas(ll.lat, ll.lng)) {
+      estadoBusqueda.textContent = "Ese resultado no tiene un punto utilizable. Márcalo en el mapa.";
+      return;
+    }
+    seqGeo += 1;
+    estadoBusqueda.textContent = "";
+    provisional = {
+      lat: ll.lat,
+      lng: ll.lng,
+      nombre: textoLugar(place),
+      direccion: place.formattedAddress || "",
+      placeId: place.id || "",
+    };
+    escribirCoords(ll.lat, ll.lng);
+    pintarResumen();
+    if (mapa) mapa.setZoom(17);
+    sincronizarMarcador();
+  }
+
+  function leerCoordsEscritas() {
+    var latTxt = limpiar(inputLat.value).replace(",", ".");
+    var lngTxt = limpiar(inputLng.value).replace(",", ".");
+    if (!latTxt && !lngTxt) return { vacio: true };
+    if (!latTxt || !lngTxt) return { error: "incompleto" };
+    var lat = Number(latTxt);
+    var lng = Number(lngTxt);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { error: "formato" };
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return { error: "rango" };
+    if (!coordsValidas(lat, lng)) return { error: "rango" };
     return { lat: lat, lng: lng };
   }
 
-  function actualizarComprobar() {
-    var punto = parsearCoordenadas(campoCoords.value);
-    if (punto && !punto.error) {
-      comprobarPunto.hidden = false;
-      comprobarPunto.href = urlMaps(punto.lat + "," + punto.lng);
-    } else {
-      comprobarPunto.hidden = true;
-      comprobarPunto.removeAttribute("href");
+  function alEditarCoords() {
+    if (silenciarCoords) return;
+    var leido = leerCoordsEscritas();
+    if (leido.vacio) {
+      seqGeo += 1;
+      provisional = null;
+      if (marcador) marcador.map = null;
+      errorCoordsModal.textContent = "";
+      pintarResumen();
+      return;
     }
+    if (leido.error) {
+      seqGeo += 1;
+      provisional = null;
+      if (marcador) marcador.map = null;
+      inputLat.setAttribute("aria-invalid", "true");
+      inputLng.setAttribute("aria-invalid", "true");
+      errorCoordsModal.textContent = leido.error === "rango"
+        ? "La latitud debe estar entre -90 y 90, y la longitud entre -180 y 180."
+        : "Escribe latitud y longitud en grados decimales.";
+      pintarResumen();
+      return;
+    }
+    if (provisional && provisional.lat === leido.lat && provisional.lng === leido.lng) return;
+    fijarPuntoLibre(leido.lat, leido.lng);
   }
 
-  function validarUbicacion() {
-    var referencia = limpiar(campoUbicacion.value);
-    var textoCoords = campoCoords.value;
-    var punto = parsearCoordenadas(textoCoords);
-    var coordsOk = !!(punto && !punto.error);
-    var refOk = referencia.length >= 3;
-    var ubicOk = true;
+  inputLat.addEventListener("input", alEditarCoords);
+  inputLng.addEventListener("input", alEditarCoords);
 
-    if (limpiar(textoCoords)) {
-      if (!coordsOk) {
-        campoCoords.setAttribute("aria-invalid", "true");
-        errorCoords.textContent = punto && punto.error === "rango"
-          ? "La latitud debe estar entre -90 y 90, y la longitud entre -180 y 180."
-          : "Introduce latitud y longitud en grados decimales, por ejemplo 41.403380, 2.174030.";
-        ubicOk = false;
-      } else {
-        campoCoords.removeAttribute("aria-invalid");
-        errorCoords.textContent = "";
+  function prepararBuscador(libs) {
+    if (contenedorBusqueda.querySelector("gmp-place-autocomplete")) return;
+    var elemento = new libs.PlaceAutocompleteElement({ includedRegionCodes: ["es"] });
+    elemento.id = "buscar-lugar";
+    elemento.placeholder = "Buscar sede, empresa, dirección u obra";
+    elemento.setAttribute("aria-label", "Buscar sede, empresa, dirección u obra");
+    contenedorBusqueda.textContent = "";
+    contenedorBusqueda.appendChild(elemento);
+    elemento.addEventListener("gmp-select", function (ev) {
+      var prediction = ev.placePrediction || (ev.detail && ev.detail.placePrediction);
+      if (!prediction || typeof prediction.toPlace !== "function") return;
+      var place = prediction.toPlace();
+      place.fetchFields({ fields: ["displayName", "formattedAddress", "location", "id"] }).then(function () {
+        aplicarLugar(place);
+      }).catch(function () {
+        estadoBusqueda.textContent = "No se ha podido cargar ese resultado. Prueba con otro o marca el punto en el mapa.";
+      });
+    });
+    elemento.addEventListener("gmp-placeselect", function (ev) {
+      if (ev.place) aplicarLugar(ev.place);
+    });
+    elemento.addEventListener("gmp-error", function () {
+      estadoBusqueda.textContent = "No se han encontrado resultados. Puedes marcar el punto directamente en el mapa.";
+    });
+  }
+
+  function iniciarMapa(libs) {
+    if (mapa) return;
+    Marcador = libs.AdvancedMarkerElement;
+    lienzoMapa.classList.remove("vacio");
+    lienzoMapa.textContent = "";
+    mapa = new libs.Map(lienzoMapa, {
+      center: { lat: 40.2, lng: -3.7 },
+      zoom: 6,
+      mapId: mapaId,
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: false,
+      clickableIcons: true,
+      gestureHandling: "greedy",
+    });
+    mapa.addListener("click", function (ev) {
+      if (ev.placeId && libs.Place) {
+        if (typeof ev.stop === "function") ev.stop();
+        var place = new libs.Place({ id: ev.placeId });
+        place.fetchFields({ fields: ["displayName", "formattedAddress", "location", "id"] }).then(function () {
+          aplicarLugar(place);
+        }).catch(function () {
+          var ll = leerLatLng(ev.latLng);
+          if (ll) fijarPuntoLibre(ll.lat, ll.lng);
+        });
+        return;
       }
-    } else {
-      campoCoords.removeAttribute("aria-invalid");
-      errorCoords.textContent = "";
-    }
-
-    if (!refOk && !coordsOk) {
-      campoUbicacion.setAttribute("aria-invalid", "true");
-      errorUbicacion.textContent = "Indica una referencia de la obra, explotación o acceso, o las coordenadas de la máquina.";
-      ubicOk = false;
-    } else {
-      campoUbicacion.removeAttribute("aria-invalid");
-      errorUbicacion.textContent = "";
-    }
-
-    actualizarComprobar();
-    return ubicOk;
+      var ll = leerLatLng(ev.latLng);
+      if (ll) fijarPuntoLibre(ll.lat, ll.lng);
+    });
+    geocoder = new libs.Geocoder();
+    prepararBuscador(libs);
+    aplicarVistaProvisional();
   }
 
-  campoCoords.addEventListener("input", function () {
-    actualizarComprobar();
-    if (campoCoords.hasAttribute("aria-invalid") || campoUbicacion.hasAttribute("aria-invalid")) {
-      validarUbicacion();
-    }
-  });
-  campoCoords.addEventListener("blur", function () {
-    if (limpiar(campoCoords.value) || campoUbicacion.hasAttribute("aria-invalid")) validarUbicacion();
-  });
-  campoUbicacion.addEventListener("blur", function () {
-    if (limpiar(campoUbicacion.value) || campoCoords.hasAttribute("aria-invalid") || campoUbicacion.hasAttribute("aria-invalid")) {
-      validarUbicacion();
-    }
-  });
+  function instalarCargador() {
+    if (window.google && window.google.maps && window.google.maps.importLibrary) return;
+    var w = window;
+    var googleNs = w.google = w.google || {};
+    var maps = googleNs.maps = googleNs.maps || {};
+    var pendientes = new Set();
+    var promesa = null;
+    maps.importLibrary = function (nombre) {
+      pendientes.add(nombre);
+      promesa = promesa || new Promise(function (ok, fail) {
+        setTimeout(function () {
+          var script = document.createElement("script");
+          var params = new URLSearchParams();
+          params.set("libraries", Array.from(pendientes).join(","));
+          params.set("key", claveMaps);
+          params.set("v", "weekly");
+          params.set("callback", "google.maps.__ib__");
+          script.src = "https://maps.googleapis.com/maps/api/js?" + params.toString();
+          script.async = true;
+          maps.__ib__ = ok;
+          script.onerror = function () {
+            promesa = null;
+            fail(new Error("No se ha podido cargar Google Maps"));
+          };
+          document.head.appendChild(script);
+        }, 0);
+      });
+      return promesa.then(function () { return maps.importLibrary(nombre); });
+    };
+  }
 
-  document.getElementById("abrir-maps").addEventListener("click", function () {
-    var punto = parsearCoordenadas(campoCoords.value);
-    var consulta = "";
-    if (punto && !punto.error) consulta = punto.lat + "," + punto.lng;
-    else if (limpiar(campoUbicacion.value)) consulta = limpiar(campoUbicacion.value);
-    window.open(consulta ? urlMaps(consulta) : "https://www.google.com/maps", "_blank", "noopener");
+  function cargarMapa() {
+    if (!claveMaps) {
+      avisoMapa.hidden = false;
+      avisoMapa.textContent = "Falta la clave de Google Maps. El mapa y el buscador no pueden cargarse todavía. Puedes escribir la latitud y la longitud y confirmar el punto en esta ventana.";
+      lienzoMapa.classList.add("vacio");
+      lienzoMapa.textContent = "Mapa no disponible hasta configurar la clave de API.";
+      return Promise.resolve();
+    }
+    if (mapa) return Promise.resolve();
+    if (mapsCargando) return mapsCargando;
+    instalarCargador();
+    mapsCargando = Promise.all([
+      window.google.maps.importLibrary("maps"),
+      window.google.maps.importLibrary("marker"),
+      window.google.maps.importLibrary("places"),
+      window.google.maps.importLibrary("geocoding"),
+    ]).then(function (libs) {
+      mapsLista = true;
+      avisoMapa.hidden = true;
+      iniciarMapa({
+        Map: libs[0].Map,
+        AdvancedMarkerElement: libs[1].AdvancedMarkerElement,
+        PlaceAutocompleteElement: libs[2].PlaceAutocompleteElement,
+        Place: libs[2].Place,
+        Geocoder: libs[3].Geocoder,
+      });
+    }).catch(function () {
+      mapsCargando = null;
+      avisoMapa.hidden = false;
+      avisoMapa.textContent = "No se ha podido cargar Google Maps. Los demás datos del formulario se conservan. Puedes escribir la latitud y la longitud y confirmar el punto.";
+      lienzoMapa.classList.add("vacio");
+      lienzoMapa.textContent = "No se ha podido cargar el mapa.";
+    });
+    return mapsCargando;
+  }
+
+  function abrirDialogo(desde) {
+    if (!dialogo || typeof dialogo.showModal !== "function") {
+      errorUbicacion.textContent = "Este navegador no puede abrir el selector de mapa.";
+      return;
+    }
+    disparador = desde || abrirSelector;
+    seqGeo += 1;
+    provisional = clonarPunto(confirmada);
+    estadoBusqueda.textContent = "";
+    estadoGeo.textContent = "";
+    errorCoordsModal.textContent = "";
+    dialogo.showModal();
+    aplicarVistaProvisional();
+    cargarMapa().then(function () {
+      if (dialogo.open) aplicarVistaProvisional();
+    });
+  }
+
+  abrirSelector.addEventListener("click", function () { abrirDialogo(abrirSelector); });
+  cambiarUbicacion.addEventListener("click", function () { abrirDialogo(cambiarUbicacion); });
+
+  dialogo.querySelectorAll("[data-cerrar-mapa]").forEach(function (el) {
+    el.addEventListener("click", function () { dialogo.close(); });
+  });
+  dialogo.addEventListener("close", function () {
+    if (!confirmadoAhora) provisional = null;
+    confirmadoAhora = false;
+    seqGeo += 1;
+    if (disparador && typeof disparador.focus === "function") disparador.focus();
+  });
+  confirmarMapa.addEventListener("click", function () {
+    if (!provisional || !coordsValidas(provisional.lat, provisional.lng)) {
+      errorCoordsModal.textContent = "Marca un punto en el mapa o escribe unas coordenadas válidas antes de confirmar.";
+      confirmarMapa.disabled = true;
+      return;
+    }
+    confirmada = clonarPunto(provisional);
+    volcarConfirmada();
+    confirmadoAhora = true;
+    dialogo.close();
   });
 
   document.getElementById("usar-ubicacion").addEventListener("click", function () {
     if (!navigator.geolocation) {
-      estadoUbicacion.textContent = "Este dispositivo no ofrece geolocalización. Marca el punto en Google Maps o introduce las coordenadas.";
+      estadoGeo.textContent = "Este dispositivo no ofrece geolocalización. Marca el punto en el mapa o escribe las coordenadas.";
       return;
     }
-    estadoUbicacion.textContent = "Solicitando ubicación…";
+    estadoGeo.textContent = "Solicitando ubicación…";
     navigator.geolocation.getCurrentPosition(function (pos) {
-      campoCoords.value = formatearPunto(pos.coords.latitude, pos.coords.longitude);
-      estadoUbicacion.textContent = "Ubicación obtenida. Comprueba que corresponde a la máquina y corrígela si hace falta.";
-      validarUbicacion();
+      estadoGeo.textContent = "Ubicación obtenida. Ajusta el marcador si hace falta y pulsa «Confirmar ubicación».";
+      fijarPuntoLibre(pos.coords.latitude, pos.coords.longitude);
     }, function (err) {
       if (err && err.code === 1) {
-        estadoUbicacion.textContent = "No se ha concedido el permiso de ubicación. Marca el punto en Google Maps o introduce las coordenadas.";
+        estadoGeo.textContent = "No se ha concedido el permiso de ubicación. Marca el punto en el mapa o escribe las coordenadas.";
       } else {
-        estadoUbicacion.textContent = "No se ha podido obtener la ubicación. Marca el punto en Google Maps o introduce las coordenadas.";
+        estadoGeo.textContent = "No se ha podido obtener la ubicación. Marca el punto en el mapa o escribe las coordenadas.";
       }
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
   });
 
-  function actualizarPuntoDialogo(lat, lng) {
-    puntoElegido = { lat: lat, lng: lng };
-    puntoMapa.textContent = "Punto marcado: " + formatearPunto(lat, lng);
-    confirmarMapa.disabled = false;
+  function validarUbicacion() {
+    if (confirmada && coordsValidas(confirmada.lat, confirmada.lng)) {
+      abrirSelector.removeAttribute("aria-invalid");
+      errorUbicacion.textContent = "";
+      return true;
+    }
+    abrirSelector.setAttribute("aria-invalid", "true");
+    errorUbicacion.textContent = "Selecciona en el mapa la sede, la obra o el punto donde está la máquina.";
+    return false;
   }
 
-  function colocarMarcador(latLng) {
-    if (!mapaInstancia || !window.google) return;
-    if (marcadorMapa) {
-      marcadorMapa.setPosition(latLng);
-      return;
-    }
-    marcadorMapa = new window.google.maps.Marker({
-      position: latLng,
-      map: mapaInstancia,
-      draggable: true,
-      title: "Ubicación de la máquina",
-    });
-    marcadorMapa.addListener("dragend", function () {
-      var pos = marcadorMapa.getPosition();
-      actualizarPuntoDialogo(pos.lat(), pos.lng());
-    });
-  }
-
-  function iniciarMapa() {
-    var centro = { lat: 40.2, lng: -3.7 };
-    var zoom = 6;
-    var actual = parsearCoordenadas(campoCoords.value);
-    if (actual && !actual.error) {
-      centro = { lat: actual.lat, lng: actual.lng };
-      zoom = 16;
-    }
-    mapaInstancia = new window.google.maps.Map(lienzoMapa, {
-      center: centro,
-      zoom: zoom,
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
-    mapaInstancia.addListener("click", function (ev) {
-      colocarMarcador(ev.latLng);
-      actualizarPuntoDialogo(ev.latLng.lat(), ev.latLng.lng());
-    });
-    if (actual && !actual.error) {
-      colocarMarcador(centro);
-      actualizarPuntoDialogo(actual.lat, actual.lng);
-    }
-  }
-
-  function abrirSelectorMapa() {
-    if (!dialogo || typeof dialogo.showModal !== "function") {
-      estadoUbicacion.textContent = "Este navegador no puede mostrar el mapa integrado. Usa «Abrir Google Maps».";
-      return;
-    }
-    puntoElegido = null;
-    confirmarMapa.disabled = true;
-    puntoMapa.textContent = "Todavía no has marcado ningún punto.";
-    dialogo.showModal();
-    if (mapaInstancia) {
-      window.google.maps.event.trigger(mapaInstancia, "resize");
-      var actual = parsearCoordenadas(campoCoords.value);
-      if (actual && !actual.error) {
-        var pos = { lat: actual.lat, lng: actual.lng };
-        mapaInstancia.setCenter(pos);
-        mapaInstancia.setZoom(16);
-        colocarMarcador(pos);
-        actualizarPuntoDialogo(actual.lat, actual.lng);
-      }
-      return;
-    }
-    iniciarMapa();
-  }
-
-  function cargarMaps(listo) {
-    if (window.google && window.google.maps) {
-      listo();
-      return;
-    }
-    if (mapsCargando) {
-      var espera = setInterval(function () {
-        if (window.google && window.google.maps) {
-          clearInterval(espera);
-          listo();
-        }
-      }, 200);
-      return;
-    }
-    mapsCargando = true;
-    var script = document.createElement("script");
-    script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(claveMaps);
-    script.async = true;
-    script.onload = function () { listo(); };
-    script.onerror = function () {
-      mapsCargando = false;
-      estadoUbicacion.textContent = "No se ha podido cargar el mapa integrado. Usa «Abrir Google Maps» o introduce las coordenadas.";
-    };
-    document.head.appendChild(script);
-  }
-
-  if (claveMaps && elegirMapa) {
-    elegirMapa.hidden = false;
-    elegirMapa.addEventListener("click", function () {
-      cargarMaps(abrirSelectorMapa);
-    });
-  }
-
-  if (dialogo) {
-    dialogo.querySelectorAll("[data-cerrar-mapa]").forEach(function (el) {
-      el.addEventListener("click", function () { dialogo.close(); });
-    });
-  }
-  if (confirmarMapa) {
-    confirmarMapa.addEventListener("click", function () {
-      if (!puntoElegido) return;
-      campoCoords.value = formatearPunto(puntoElegido.lat, puntoElegido.lng);
-      estadoUbicacion.textContent = "Punto confirmado. Puedes ajustar las coordenadas antes de enviar.";
-      validarUbicacion();
-      if (dialogo) dialogo.close();
-    });
-  }
-
-  function resetearMapa() {
-    estadoUbicacion.textContent = "";
-    actualizarComprobar();
-    puntoElegido = null;
-    if (marcadorMapa) {
-      marcadorMapa.setMap(null);
-      marcadorMapa = null;
-    }
-    if (confirmarMapa) confirmarMapa.disabled = true;
-    if (puntoMapa) puntoMapa.textContent = "Todavía no has marcado ningún punto.";
+  function limpiarUbicacion() {
+    confirmada = null;
+    provisional = null;
+    seqGeo += 1;
+    volcarConfirmada();
+    if (marcador) marcador.map = null;
   }
 
   /* ---------------- Envío ---------------- */
@@ -434,13 +634,15 @@
     return el ? limpiar(el.value) : "";
   }
 
+  function referenciaLugar(d) {
+    if (d.nombreLugar) return d.nombreLugar;
+    if (d.indicaciones) return d.indicaciones;
+    return "Punto marcado en el mapa";
+  }
+
   function datosFormulario() {
-    var punto = parsearCoordenadas(campoCoords.value);
-    var coordsOk = punto && !punto.error ? punto : null;
-    var referencia = valor("ubicacion");
-    var enlace = "";
-    if (coordsOk) enlace = urlMaps(coordsOk.lat + "," + coordsOk.lng);
-    else if (referencia) enlace = urlMaps(referencia);
+    var lat = confirmada ? confirmada.lat : null;
+    var lng = confirmada ? confirmada.lng : null;
     return {
       motivo: valor("motivo"),
       nombre: valor("nombre"),
@@ -450,10 +652,13 @@
       modelo: valor("marca_modelo"),
       serie: valor("numero_serie"),
       horas: valor("horas"),
-      ubicacion: referencia,
-      latitud: coordsOk ? String(coordsOk.lat) : "",
-      longitud: coordsOk ? String(coordsOk.lng) : "",
-      enlaceMaps: enlace,
+      nombreLugar: confirmada ? confirmada.nombre : "",
+      direccion: confirmada ? confirmada.direccion : "",
+      latitud: coordsValidas(lat, lng) ? String(lat) : "",
+      longitud: coordsValidas(lat, lng) ? String(lng) : "",
+      placeId: confirmada ? confirmada.placeId : "",
+      indicaciones: valor("indicaciones"),
+      enlaceMaps: coordsValidas(lat, lng) ? urlMaps(lat, lng) : "",
       descripcion: valor("descripcion"),
       codigos: valor("codigos_fallo"),
       comprobaciones: valor("comprobaciones"),
@@ -461,7 +666,7 @@
   }
 
   function lineasCorreo(d) {
-    var lineas = [
+    return [
       "Motivo de la solicitud: " + d.motivo,
       "Nombre o empresa: " + d.nombre,
       "Correo: " + d.correo,
@@ -470,17 +675,20 @@
       "Marca y modelo: " + d.modelo,
       "Número de serie o PIN: " + (d.serie || "—"),
       "Horas de máquina: " + (d.horas || "—"),
-      "Referencia de ubicación: " + (d.ubicacion || "—"),
+      "Referencia de la sede u obra: " + referenciaLugar(d),
+      "Nombre del establecimiento: " + (d.nombreLugar || "—"),
+      "Dirección: " + (d.direccion || "—"),
       "Latitud: " + (d.latitud || "—"),
       "Longitud: " + (d.longitud || "—"),
+      "Google place ID: " + (d.placeId || "—"),
+      "Indicaciones de acceso: " + (d.indicaciones || "—"),
       "Enlace de Google Maps: " + (d.enlaceMaps || "—"),
       "Códigos de fallo: " + (d.codigos || "—"),
       "Comprobaciones realizadas: " + (d.comprobaciones || "—"),
       "",
       "Descripción de la incidencia o de la pieza:",
       d.descripcion,
-    ];
-    return lineas.join("\n");
+    ].join("\n");
   }
 
   form.addEventListener("submit", function (e) {
@@ -490,7 +698,7 @@
     var invalidos = campos.filter(function (c) { return !validarCampo(c); });
     var ubicOk = validarUbicacion();
     if (invalidos.length || !ubicOk) {
-      var foco = invalidos[0] || (campoUbicacion.getAttribute("aria-invalid") === "true" ? campoUbicacion : campoCoords);
+      var foco = invalidos[0] || abrirSelector;
       if (foco) foco.focus();
       return;
     }
@@ -517,9 +725,13 @@
       "Marca y modelo": d.modelo,
       "Número de serie o PIN": d.serie || "—",
       "Horas de máquina": d.horas || "—",
-      "Referencia de ubicación": d.ubicacion || "—",
+      "Referencia de la sede u obra": referenciaLugar(d),
+      "Nombre del establecimiento": d.nombreLugar || "—",
+      "Dirección": d.direccion || "—",
       "Latitud": d.latitud || "—",
       "Longitud": d.longitud || "—",
+      "Google place ID": d.placeId || "—",
+      "Indicaciones de acceso": d.indicaciones || "—",
       "Enlace de Google Maps": d.enlaceMaps || "—",
       "Códigos de fallo": d.codigos || "—",
       "Comprobaciones realizadas": d.comprobaciones || "—",
@@ -544,11 +756,7 @@
         if (respuesta.success === false || respuesta.success === "false") throw new Error(respuesta.message || "rechazado");
         form.reset();
         campos.forEach(function (c) { c.removeAttribute("aria-invalid"); });
-        campoUbicacion.removeAttribute("aria-invalid");
-        campoCoords.removeAttribute("aria-invalid");
-        errorUbicacion.textContent = "";
-        errorCoords.textContent = "";
-        resetearMapa();
+        limpiarUbicacion();
         mostrarEstado("ok", "Solicitud enviada", "Hemos recibido tu solicitud. Te responderemos a la dirección de correo indicada.");
       })
       .catch(function () {
@@ -562,5 +770,8 @@
       });
   });
 
-  actualizarComprobar();
+  if (!claveMaps) {
+    var buscar = document.getElementById("buscar-lugar");
+    if (buscar) buscar.disabled = true;
+  }
 })();

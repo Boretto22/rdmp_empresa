@@ -521,35 +521,28 @@
 
             <fieldset class="ubicacion campo--ancho">
               <legend>Ubicación de la máquina <span class="obligatorio" aria-hidden="true">*</span></legend>
-              <p class="campo__ayuda" id="a-ubicacion">Indica una referencia de la obra, explotación o acceso, o las coordenadas de la máquina. Si tienes ambas, mejor.</p>
+              <p class="campo__ayuda" id="a-ubicacion">Selecciona en el mapa la sede, la obra o el punto exacto donde está la máquina.</p>
+              <button class="boton boton--secundario" type="button" id="abrir-selector" aria-describedby="a-ubicacion e-ubicacion">Seleccionar sede u obra en el mapa</button>
+              <p class="campo__error" id="e-ubicacion"></p>
 
-              <div class="campo">
-                <label for="f-ubicacion">Referencia de obra, explotación o acceso</label>
-                <input id="f-ubicacion" name="ubicacion" type="text" placeholder="Localidad, provincia, obra o acceso" autocomplete="off" aria-describedby="a-ubicacion e-ubicacion">
-                <p class="campo__error" id="e-ubicacion"></p>
-              </div>
-
-              <div class="ubicacion__mapa">
-                <p class="ubicacion__instrucciones" id="a-maps">Marca el punto donde está la máquina en Google Maps, copia sus coordenadas y pégalas aquí.</p>
-                <div class="ubicacion__acciones">
-                  <button class="boton boton--secundario" type="button" id="abrir-maps" aria-describedby="a-maps">Abrir Google Maps <span class="visualmente-oculto">(se abre en una pestaña nueva)</span></button>
-                  <button class="boton boton--secundario" type="button" id="elegir-mapa" hidden>Elegir el punto en el mapa</button>
-                </div>
+              <div class="ubicacion__tarjeta" id="tarjeta-ubicacion" hidden>
+                <p class="ubicacion__tarjeta-titulo" id="tarjeta-nombre"></p>
+                <p class="ubicacion__tarjeta-dir" id="tarjeta-direccion"></p>
+                <p class="ubicacion__tarjeta-coords" id="tarjeta-coords"></p>
+                <button class="boton boton--secundario" type="button" id="cambiar-ubicacion">Cambiar ubicación</button>
               </div>
 
               <div class="campo">
-                <label for="f-coordenadas">Coordenadas de la máquina</label>
-                <input id="f-coordenadas" name="coordenadas" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="41.403380, 2.174030" aria-describedby="a-coordenadas e-coordenadas">
-                <p class="campo__ayuda" id="a-coordenadas">Latitud y longitud en grados decimales, separadas por una coma. Ejemplo: 41.403380, 2.174030</p>
-                <p class="campo__error" id="e-coordenadas"></p>
+                <label for="f-indicaciones">Nombre de la obra o indicaciones de acceso <span class="opcional">(opcional)</span></label>
+                <input id="f-indicaciones" name="indicaciones" type="text" autocomplete="off" placeholder="Cantera norte, entrada de camiones, máquina junto a la nave" aria-describedby="a-indicaciones">
+                <p class="campo__ayuda" id="a-indicaciones">Sirve para precisar el acceso. No sustituye el punto elegido en el mapa.</p>
               </div>
 
-              <div class="ubicacion__acciones">
-                <button class="boton boton--secundario" type="button" id="usar-ubicacion" aria-describedby="a-usar-ubicacion">Usar mi ubicación</button>
-                <a class="ubicacion__comprobar" id="comprobar-punto" href="#" target="_blank" rel="noopener" hidden>Comprobar punto en Google Maps <span class="visualmente-oculto">(se abre en una pestaña nueva)</span></a>
-              </div>
-              <p class="campo__ayuda" id="a-usar-ubicacion">Úsala solo si estás junto a la máquina.</p>
-              <p class="ubicacion__estado" id="estado-ubicacion" role="status" aria-live="polite"></p>
+              <input type="hidden" name="lugar_nombre" id="f-lugar-nombre">
+              <input type="hidden" name="lugar_direccion" id="f-lugar-direccion">
+              <input type="hidden" name="latitud" id="f-latitud">
+              <input type="hidden" name="longitud" id="f-longitud">
+              <input type="hidden" name="place_id" id="f-place-id">
             </fieldset>
 
             <div class="campo campo--ancho">
@@ -587,12 +580,38 @@
 
   <dialog class="dialogo-mapa" id="dialogo-mapa" aria-labelledby="dialogo-mapa-titulo" aria-describedby="dialogo-mapa-ayuda">
     <div class="dialogo-mapa__cabecera">
-      <h2 id="dialogo-mapa-titulo">Elegir el punto de la máquina</h2>
+      <h2 id="dialogo-mapa-titulo">¿Dónde se encuentra la máquina?</h2>
       <button class="dialogo-mapa__cerrar" type="button" data-cerrar-mapa aria-label="Cerrar sin guardar">×</button>
     </div>
-    <p class="dialogo-mapa__ayuda" id="dialogo-mapa-ayuda">Haz clic en el mapa donde está la máquina. Puedes arrastrar el marcador para ajustarlo antes de confirmar.</p>
-    <div class="dialogo-mapa__lienzo" id="lienzo-mapa"></div>
-    <p class="dialogo-mapa__punto" id="punto-mapa" aria-live="polite">Todavía no has marcado ningún punto.</p>
+    <div class="dialogo-mapa__cuerpo">
+      <p class="dialogo-mapa__ayuda" id="dialogo-mapa-ayuda">Busca la sede o la obra, pulsa el mapa, mueve el marcador o escribe las coordenadas. El centro inicial del mapa no cuenta como ubicación.</p>
+      <p class="dialogo-mapa__aviso" id="aviso-mapa" role="status" hidden></p>
+      <div class="campo">
+        <label for="buscar-lugar">Buscar sede, empresa, dirección u obra</label>
+        <div class="dialogo-mapa__busqueda" id="contenedor-busqueda">
+          <input id="buscar-lugar" type="search" autocomplete="off" disabled placeholder="Buscar sede, empresa, dirección u obra">
+        </div>
+        <p class="campo__error" id="estado-busqueda" role="status"></p>
+      </div>
+      <div class="dialogo-mapa__lienzo" id="lienzo-mapa" role="application" aria-label="Mapa para marcar la ubicación de la máquina"></div>
+      <div class="dialogo-mapa__geo">
+        <button class="boton boton--secundario" type="button" id="usar-ubicacion" aria-describedby="a-usar-ubicacion">Usar mi ubicación</button>
+        <p class="campo__ayuda" id="a-usar-ubicacion">Utiliza esta opción solo si estás junto a la máquina.</p>
+        <p class="dialogo-mapa__estado" id="estado-geo" role="status"></p>
+      </div>
+      <div class="dialogo-mapa__coords">
+        <div class="campo">
+          <label for="m-lat">Latitud</label>
+          <input id="m-lat" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="41.403380" aria-describedby="e-coords-modal">
+        </div>
+        <div class="campo">
+          <label for="m-lng">Longitud</label>
+          <input id="m-lng" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="2.174030" aria-describedby="e-coords-modal">
+        </div>
+      </div>
+      <p class="campo__error" id="e-coords-modal"></p>
+      <p class="dialogo-mapa__resumen" id="resumen-punto" aria-live="polite">Todavía no has marcado ningún punto.</p>
+    </div>
     <div class="dialogo-mapa__acciones">
       <button class="boton boton--secundario" type="button" data-cerrar-mapa>Cancelar</button>
       <button class="boton boton--primario" type="button" id="confirmar-mapa" disabled>Confirmar ubicación</button>

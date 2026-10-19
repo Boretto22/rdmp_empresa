@@ -22,8 +22,11 @@ window.RDMP_CONFIG = {
   // Si no hay ni destino ni correo, el formulario queda desactivado.
   destinoFormulario: "https://formsubmit.co/ajax/rdmpmaquinaria@gmail.com",
 
-  // Clave de Google Maps JavaScript API. Vacía = flujo base (abrir Maps, copiar
-  // coordenadas, geolocalización opcional). Con una clave autorizada aparece
-  // el botón «Elegir el punto en el mapa». Cómo obtenerla: README, «Google Maps».
+  // Clave de navegador de Google Maps JavaScript API. Vacía: el selector se abre,
+  // pero el mapa y el buscador no cargan hasta pegar aquí una clave autorizada.
+  // APIs, facturación y restricciones: README, «Selector de Google Maps».
   claveMapsGoogle: "",
+
+  // Map ID de Google Cloud para el marcador avanzado. Vacío usa DEMO_MAP_ID.
+  mapaIdGoogle: "",
 };

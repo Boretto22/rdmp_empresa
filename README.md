@@ -27,7 +27,8 @@ window.RDMP_CONFIG = {
   telefono: "",          // teléfono tal y como debe mostrarse
   zonaCobertura: "",     // zona de cobertura en texto libre
   destinoFormulario: "", // URL que recibe el formulario por POST
-  claveMapsGoogle: "",   // opcional: Google Maps JavaScript API
+  claveMapsGoogle: "",   // Google Maps JavaScript API; vacía hasta configurarla
+  mapaIdGoogle: "",      // opcional; vacío usa DEMO_MAP_ID
 };
 ```
 
@@ -51,7 +52,7 @@ Campos que llegan al correo:
 - Motivo de la solicitud (diagnóstico y asistencia, reparación in situ, mantenimiento, impresión 3D metálica u otra consulta)
 - Nombre o empresa, correo y teléfono (opcional)
 - Tipo de máquina, marca y modelo, número de serie o PIN (opcional) y horas de máquina (opcional)
-- Referencia de ubicación, latitud, longitud y enlace de Google Maps
+- Referencia de la sede u obra, nombre del establecimiento, dirección, latitud, longitud, Google place ID, indicaciones de acceso y enlace de Google Maps
 - Códigos de fallo y comprobaciones realizadas (opcionales)
 - Descripción de la incidencia o de la pieza
 - Aceptación del uso de los datos
@@ -68,27 +69,35 @@ La web identifica la tecnología (Markforged Metal X, acero 17-4 PH, Wash-1 y Si
 
 El criterio de diseño es una furgoneta grande; el peso no es el criterio principal. No basta con «meter la impresora»: hay que contemplar el conjunto Metal X + Wash-1 + Sinter-1, accesos y mantenimiento, alimentación eléctrica, extracción, gases, consumibles, anclajes y condiciones de operación. La validación de esa instalación es independiente de esta web. No consta que Markforged certifique estos equipos para funcionar dentro de una furgoneta.
 
-## Ubicación de la máquina y Google Maps
+## Selector de Google Maps
 
-El formulario admite una referencia de obra/explotación/acceso, coordenadas, o ambas. Hace falta al menos una de las dos (referencia suficiente o coordenadas válidas). Si hay coordenadas, se validan aunque exista dirección:
+El cliente elige la sede, la obra o el punto de la máquina en un mapa dentro de la web («Seleccionar sede u obra en el mapa»). No se abre Google Maps en otra pestaña para copiar coordenadas. Confirmar guarda la ubicación en la solicitud en curso; no se envía hasta pulsar «Enviar solicitud».
 
-- Latitud entre -90 y 90, longitud entre -180 y 180.
-- El 0 es un valor válido.
-- Se rechazan pares incompletos o fuera de rango.
-- Al borrar o cambiar el campo no se reutilizan coordenadas anteriores.
+El modal permite buscar con autocompletado, pulsar el mapa, arrastrar el marcador, escribir latitud y longitud, o usar la geolocalización. Esta última solo pide permiso al pulsar el botón y no confirma sola. Cancelar no cambia la ubicación ya confirmada. Una respuesta antigua de geocodificación no pisa una selección más reciente.
 
-Flujo base, **sin clave**:
+Latitud de -90 a 90 y longitud de -180 a 180. El cero es válido. Sin dirección postal bastan las coordenadas. El enlace de Google Maps se genera al enviar, para quien recibe el correo; no es el modo de selección.
 
-1. «Abrir Google Maps» abre una pestaña nueva (o la aplicación) y no borra el formulario.
-2. El usuario copia las coordenadas y las pega, o las escribe a mano (ejemplo: `41.403380, 2.174030`).
-3. «Comprobar punto en Google Maps» usa `https://www.google.com/maps/search/?api=1&query=` + `encodeURIComponent(latitud + "," + longitud)`.
-4. «Usar mi ubicación» pide permiso **solo al pulsar el botón**, indica que debe usarse junto a la máquina y permite corregir el resultado.
+**Falta la clave para activar el mapa.** En `public/config.js`, `claveMapsGoogle` está vacía. Mientras lo esté, el selector se abre y avisa de que el mapa no carga; se pueden confirmar coordenadas escritas a mano. No hay clave de ejemplo en el repositorio.
 
-Un enlace a Google Maps no devuelve el punto al formulario; no hay callback ficticio ni iframe que capture la selección.
+### Qué hay que habilitar en Google Cloud
 
-### Activar el selector integrado
+Cuenta de facturación y estas APIs:
 
-Si hay una clave autorizada de [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript) (con facturación y restricciones de dominio en Google Cloud), pégala en `claveMapsGoogle` dentro de `public/config.js`. Entonces aparece «Elegir el punto en el mapa»: diálogo, clic o toque, marcador arrastrable y confirmación que rellena las coordenadas. Sin clave, el botón permanece oculto. No actives facturación ni inventes credenciales desde este repositorio.
+- Maps JavaScript API
+- Places API (New), para el buscador `PlaceAutocompleteElement`
+- Geocoding API, para la dirección inversa al pulsar o mover el marcador
+
+Crea una clave de navegador y pégala en `claveMapsGoogle`. Restrínge la por APIs (solo las tres anteriores) y por sitios:
+
+- `https://rdmpempresa.vercel.app/*`
+- `http://localhost:4173/*`
+- `http://127.0.0.1:4173/*`
+
+La clave queda visible en el navegador; esas restricciones son las que limitan su uso.
+
+`mapaIdGoogle` es opcional. Vacío, el marcador usa `DEMO_MAP_ID`, válido para desarrollo. Para producción, crea un Map ID en Google Cloud y ponlo en `mapaIdGoogle`.
+
+La política de privacidad debe mencionar Google Maps y la geolocalización cuando la clave esté activa.
 
 ## Imágenes
 
@@ -138,7 +147,7 @@ Barlow y Barlow Condensed, servidas desde `public/assets/fonts/` (sin peticiones
 - [ ] Derechos de publicación de las cinco fotografías usadas (los logotipos propios y la ilustración conceptual de fabricación no sustituyen esa revisión).
 - [ ] Aviso legal (identificación del titular, obligatoria en España según la LSSI) y política de privacidad (RGPD), enlazados en el pie y junto a la casilla del formulario. La política debe mencionar FormSubmit y, si se activa, Google Maps y la geolocalización.
 - [x] Dominio: la web está publicada en Vercel en <https://rdmpempresa.vercel.app/>. Si se cambia de dominio, actualizar `canonical`, `og:url` y `og:image` en `public/index.html` y volver a activar FormSubmit desde el nuevo dominio.
-- [ ] Clave de Google Maps JavaScript API, solo si se quiere el selector de mapa integrado.
+- [ ] Clave de Google Maps (`claveMapsGoogle`) con Maps JavaScript API, Places API (New) y Geocoding API. Sin ella el mapa del formulario no carga.
 - [ ] Validación independiente de la instalación del Metal X, Wash-1 y Sinter-1 en la furgoneta.
 
 ## Publicación en Vercel
