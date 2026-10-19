@@ -27,12 +27,13 @@ window.RDMP_CONFIG = {
   telefono: "",          // teléfono tal y como debe mostrarse
   zonaCobertura: "",     // zona de cobertura en texto libre
   destinoFormulario: "", // URL que recibe el formulario por POST
+  claveMapsGoogle: "",   // opcional: Google Maps JavaScript API
 };
 ```
 
 - Los campos vacíos se muestran como **«Pendiente de confirmar»**.
 - El formulario tiene tres comportamientos, según lo que haya configurado:
-  1. **Sin `destinoFormulario` ni `correo`** (estado actual): el botón está desactivado y se avisa de que el contacto está **pendiente de activación**. No se envía nada.
+  1. **Sin `destinoFormulario` ni `correo`**: el botón está desactivado y se avisa de que el contacto está **pendiente de activación**. No se envía nada.
   2. **Solo `correo`**: el botón «Preparar correo» abre el programa de correo del usuario con la solicitud redactada. La web avisa de que el mensaje no se envía desde ella.
   3. **Con `destinoFormulario`** (estado actual): se envían los datos en JSON por `POST` a esa URL. Solo se muestra «Solicitud enviada» si el servicio confirma la recepción.
 
@@ -45,7 +46,49 @@ El formulario usa [FormSubmit](https://formsubmit.co/) (`https://formsubmit.co/a
 - **Privacidad:** los datos pasan por FormSubmit, un servicio de terceros. La política de privacidad debe mencionarlo.
 - **Cambiar de servicio:** basta con poner otra URL en `destinoFormulario` (Formspree, un backend propio…). Si el servicio exige otro formato de datos, se ajusta en `public/js/main.js`.
 
-Campos que llegan al correo: nombre o empresa, correo, tipo de máquina, marca y modelo, ubicación de la máquina, descripción de la incidencia y aceptación del uso de los datos.
+Campos que llegan al correo:
+
+- Motivo de la solicitud (diagnóstico y asistencia, reparación in situ, mantenimiento, impresión 3D metálica u otra consulta)
+- Nombre o empresa, correo y teléfono (opcional)
+- Tipo de máquina, marca y modelo, número de serie o PIN (opcional) y horas de máquina (opcional)
+- Referencia de ubicación, latitud, longitud y enlace de Google Maps
+- Códigos de fallo y comprobaciones realizadas (opcionales)
+- Descripción de la incidencia o de la pieza
+- Aceptación del uso de los datos
+
+El asunto incluye el motivo, el tipo de máquina y el modelo.
+
+## Impresión 3D metálica
+
+Servicio operativo, no un anuncio futuro. Tiene mención en portada, tarjeta en Servicios, sección propia (`#impresion-3d`) y opción en el formulario.
+
+La web identifica la tecnología (Markforged Metal X, acero 17-4 PH, Wash-1 y Sinter-1) y limita el alcance a piezas auxiliares no críticas. No afirma colaboración oficial con Markforged, certificaciones, plazos universales ni que toda pieza salga lista para montar.
+
+### Unidad móvil (documentación interna, no publicada en la web)
+
+El criterio de diseño es una furgoneta grande; el peso no es el criterio principal. No basta con «meter la impresora»: hay que contemplar el conjunto Metal X + Wash-1 + Sinter-1, accesos y mantenimiento, alimentación eléctrica, extracción, gases, consumibles, anclajes y condiciones de operación. La validación de esa instalación es independiente de esta web. No consta que Markforged certifique estos equipos para funcionar dentro de una furgoneta.
+
+## Ubicación de la máquina y Google Maps
+
+El formulario admite una referencia de obra/explotación/acceso, coordenadas, o ambas. Hace falta al menos una de las dos (referencia suficiente o coordenadas válidas). Si hay coordenadas, se validan aunque exista dirección:
+
+- Latitud entre -90 y 90, longitud entre -180 y 180.
+- El 0 es un valor válido.
+- Se rechazan pares incompletos o fuera de rango.
+- Al borrar o cambiar el campo no se reutilizan coordenadas anteriores.
+
+Flujo base, **sin clave**:
+
+1. «Abrir Google Maps» abre una pestaña nueva (o la aplicación) y no borra el formulario.
+2. El usuario copia las coordenadas y las pega, o las escribe a mano (ejemplo: `41.403380, 2.174030`).
+3. «Comprobar punto en Google Maps» usa `https://www.google.com/maps/search/?api=1&query=` + `encodeURIComponent(latitud + "," + longitud)`.
+4. «Usar mi ubicación» pide permiso **solo al pulsar el botón**, indica que debe usarse junto a la máquina y permite corregir el resultado.
+
+Un enlace a Google Maps no devuelve el punto al formulario; no hay callback ficticio ni iframe que capture la selección.
+
+### Activar el selector integrado
+
+Si hay una clave autorizada de [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript) (con facturación y restricciones de dominio en Google Cloud), pégala en `claveMapsGoogle` dentro de `public/config.js`. Entonces aparece «Elegir el punto en el mapa»: diálogo, clic o toque, marcador arrastrable y confirmación que rellena las coordenadas. Sin clave, el botón permanece oculto. No actives facturación ni inventes credenciales desde este repositorio.
 
 ## Imágenes
 
@@ -91,10 +134,12 @@ Barlow y Barlow Condensed, servidas desde `public/assets/fonts/` (sin peticiones
 ## Pendiente antes de publicar
 
 - [x] Correo, teléfono y zona de cobertura en `public/config.js`.
-- [ ] Activar FormSubmit con el enlace recibido en rdmpmaquinaria@gmail.com y hacer una prueba real.
-- [ ] Derechos de publicación de las cinco imágenes usadas.
-- [ ] Aviso legal (identificación del titular, obligatoria en España según la LSSI) y política de privacidad (RGPD), enlazados en el pie y junto a la casilla del formulario.
+- [ ] Activar FormSubmit con el enlace recibido en rdmpmaquinaria@gmail.com y hacer una prueba real desde el dominio público.
+- [ ] Derechos de publicación de las cinco fotografías usadas (los logotipos propios y la ilustración conceptual de fabricación no sustituyen esa revisión).
+- [ ] Aviso legal (identificación del titular, obligatoria en España según la LSSI) y política de privacidad (RGPD), enlazados en el pie y junto a la casilla del formulario. La política debe mencionar FormSubmit y, si se activa, Google Maps y la geolocalización.
 - [x] Dominio: la web está publicada en Vercel en <https://rdmpempresa.vercel.app/>. Si se cambia de dominio, actualizar `canonical`, `og:url` y `og:image` en `public/index.html` y volver a activar FormSubmit desde el nuevo dominio.
+- [ ] Clave de Google Maps JavaScript API, solo si se quiere el selector de mapa integrado.
+- [ ] Validación independiente de la instalación del Metal X, Wash-1 y Sinter-1 en la furgoneta.
 
 ## Publicación en Vercel
 

@@ -21,4 +21,9 @@ window.RDMP_CONFIG = {
   // de correo del usuario (no se envía nada desde la web).
   // Si no hay ni destino ni correo, el formulario queda desactivado.
   destinoFormulario: "https://formsubmit.co/ajax/rdmpmaquinaria@gmail.com",
+
+  // Clave de Google Maps JavaScript API. Vacía = flujo base (abrir Maps, copiar
+  // coordenadas, geolocalización opcional). Con una clave autorizada aparece
+  // el botón «Elegir el punto en el mapa». Cómo obtenerla: README, «Google Maps».
+  claveMapsGoogle: "",
 };
