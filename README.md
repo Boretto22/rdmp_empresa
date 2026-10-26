@@ -59,15 +59,15 @@ Campos que llegan al correo:
 
 El asunto incluye el motivo, el tipo de máquina y el modelo.
 
-## Impresión 3D metálica
+## Impresión 3D
 
-Servicio operativo, no un anuncio futuro. Tiene mención en portada, tarjeta en Servicios, sección propia (`#impresion-3d`) y opción en el formulario.
+Servicio operativo, con la misma jerarquía que el resto: mención en la franja de la portada, tarjeta en Servicios, sección compacta (`#impresion-3d`) y opción en el formulario. No hay bloque promocional en la portada ni tarjeta resaltada.
 
-La web identifica la tecnología (Markforged Metal X, acero 17-4 PH, Wash-1 y Sinter-1) y limita el alcance a piezas auxiliares no críticas. No afirma colaboración oficial con Markforged, certificaciones, plazos universales ni que toda pieza salga lista para montar.
+La sección visible resume aplicaciones, materiales y alcance. El límite a piezas no críticas queda fuera del desplegable. «Detalles de fabricación», cerrado por defecto, cita la configuración de referencia: Markforged FX10 + Metal Kit, lavado y sinterización en metal, escáner 3D, medición y acabado. El 17-4 PH es el metal de referencia, no una solución universal. La web no afirma compra del equipo, colaboración oficial con Markforged, instalación móvil certificada, piezas metálicas acabadas al salir de la impresora ni plazos instantáneos.
 
-### Unidad móvil (documentación interna, no publicada en la web)
+### Unidad móvil (documentación interna, no publicada como ficha)
 
-El criterio de diseño es una furgoneta grande; el peso no es el criterio principal. No basta con «meter la impresora»: hay que contemplar el conjunto Metal X + Wash-1 + Sinter-1, accesos y mantenimiento, alimentación eléctrica, extracción, gases, consumibles, anclajes y condiciones de operación. La validación de esa instalación es independiente de esta web. No consta que Markforged certifique estos equipos para funcionar dentro de una furgoneta.
+Decisión vigente del equipo de referencia: FX10 + Metal Kit, lavado y sinterización, escáner 3D, medición y acabado. El criterio de diseño sigue siendo una furgoneta grande; el peso no es el criterio principal. Hay que contemplar accesos, mantenimiento, alimentación, extracción, gases, consumibles, anclajes y condiciones de operación. La validación de esa instalación es independiente de esta web y no está hecha. No consta certificación de Markforged para usar estos equipos dentro de una furgoneta. Metal X, Wash-1 y Sinter-1 ya no son la referencia pública ni interna del equipo.
 
 ## Selector de Google Maps
 
@@ -144,11 +144,11 @@ Barlow y Barlow Condensed, servidas desde `public/assets/fonts/` (sin peticiones
 
 - [x] Correo, teléfono y zona de cobertura en `public/config.js`.
 - [ ] Activar FormSubmit con el enlace recibido en rdmpmaquinaria@gmail.com y hacer una prueba real desde el dominio público.
-- [ ] Derechos de publicación de las cinco fotografías usadas (los logotipos propios y la ilustración conceptual de fabricación no sustituyen esa revisión).
+- [ ] Derechos de publicación de las cinco fotografías usadas (los logotipos propios no sustituyen esa revisión).
 - [ ] Aviso legal (identificación del titular, obligatoria en España según la LSSI) y política de privacidad (RGPD), enlazados en el pie y junto a la casilla del formulario. La política debe mencionar FormSubmit y, si se activa, Google Maps y la geolocalización.
 - [x] Dominio: la web está publicada en Vercel en <https://rdmpempresa.vercel.app/>. Si se cambia de dominio, actualizar `canonical`, `og:url` y `og:image` en `public/index.html` y volver a activar FormSubmit desde el nuevo dominio.
 - [ ] Clave de Google Maps (`claveMapsGoogle`) con Maps JavaScript API, Places API (New) y Geocoding API. Sin ella el mapa del formulario no carga.
-- [ ] Validación independiente de la instalación del Metal X, Wash-1 y Sinter-1 en la furgoneta.
+- [ ] Validación independiente de la instalación del FX10 + Metal Kit, con lavado, sinterización, escáner y acabado, en la furgoneta.
 
 ## Publicación en Vercel
 
