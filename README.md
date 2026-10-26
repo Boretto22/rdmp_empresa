@@ -36,15 +36,15 @@ window.RDMP_CONFIG = {
 - El formulario tiene tres comportamientos, según lo que haya configurado:
   1. **Sin `destinoFormulario` ni `correo`**: el botón está desactivado y se avisa de que el contacto está **pendiente de activación**. No se envía nada.
   2. **Solo `correo`**: el botón «Preparar correo» abre el programa de correo del usuario con la solicitud redactada. La web avisa de que el mensaje no se envía desde ella.
-  3. **Con `destinoFormulario`** (estado actual): se envían los datos y las fotos en `multipart/form-data` por `POST` a esa URL. Solo se muestra «Solicitud aceptada» si FormSubmit responde `success` con el booleano `true` o el texto exacto `"true"`.
+  3. **Con `destinoFormulario`** (estado actual): el navegador envía los datos y las fotos como un formulario normal. Solo se muestra «Solicitud aceptada» cuando FormSubmit redirige a `enviado.html`, que es lo que hace después de aceptar el envío.
 
 ### Envío actual: FormSubmit
 
-El formulario usa [FormSubmit](https://formsubmit.co/) (`https://formsubmit.co/ajax/rdmpmaquinaria@gmail.com`), que reenvía cada solicitud a **rdmpmaquinaria@gmail.com** como una tabla con todos los campos. El asunto incluye el tipo de máquina y el modelo, y al pulsar «Responder» se contesta directamente al cliente.
+El formulario usa [FormSubmit](https://formsubmit.co/) (`https://formsubmit.co/rdmpmaquinaria@gmail.com`), que reenvía cada solicitud a **rdmpmaquinaria@gmail.com** como una tabla con todos los campos. El asunto incluye el tipo de máquina y el modelo, y al pulsar «Responder» se contesta directamente al cliente. Si `destinoFormulario` contiene `/ajax/`, el envío lo quita: ese endpoint no devuelve una confirmación fiable cuando el formulario lleva fotos y la imagen no llega como un archivo que se pueda abrir.
 
 - **Activación:** FormSubmit no reenvía nada hasta que se pulsa el enlace «Activate Form» del correo que manda a rdmpmaquinaria@gmail.com (revisa también la carpeta de spam). **La activación va ligada a la dirección desde la que se envía el formulario**: debe hacerse con un envío desde <https://rdmpempresa.vercel.app/> (un envío desde `localhost` genera un enlace que no sirve para la web pública). Cada envío sin activar genera un correo nuevo e invalida los enlaces anteriores, así que hay que usar siempre el más reciente.
-- **Confirmación:** la web solo muestra «Solicitud aceptada» si la respuesta trae `success` con el valor booleano `true` o el texto exacto `"true"`. Es el cuerpo que devuelve el endpoint AJAX de FormSubmit cuando acepta el envío (`{"success":"true","message":"The form was submitted successfully."}`). Un HTTP 200, un objeto vacío o un cuerpo ilegible no cuentan. En ese caso el mensaje dice que no se ha podido confirmar y conserva los datos; no afirma que la solicitud no haya llegado ni que ya esté en el buzón. Hay un límite de 45 segundos y un bloqueo mientras la petición está en curso.
-- **Fotos:** el envío con destino usa `multipart/form-data`, porque JSON no puede llevar archivos. FormSubmit admite varios campos de archivo siempre que la suma no pase de 10 MB. La web limita a 6 fotos, JPEG, PNG, WebP o HEIC. No hay backend propio: el límite lo aplica el navegador antes de enviar y FormSubmit al recibir. Las fotos HEIC se envían; la miniatura avisa si el navegador no puede mostrarlas.
+- **Confirmación:** la web solo muestra «Solicitud aceptada» si FormSubmit redirige el envío a `/enviado.html`. FormSubmit hace esa redirección después de aceptar el formulario; un HTTP 200 del endpoint `/ajax/` no se usa, porque con fotos esa respuesta no era legible y la página decía que no sabía si se había enviado aunque el correo sí llegaba. Si a los 90 segundos no hay redirección, el mensaje dice que no se ha podido confirmar y conserva los datos. No afirma que la solicitud no haya llegado. Mientras tanto el formulario queda bloqueado.
+- **Fotos:** van en el mismo formulario, con `enctype="multipart/form-data"`, en el campo `attachment` que documenta FormSubmit. El navegador envía el archivo con su nombre y su tipo, no un JSON. JPEG, PNG y WebP se adjuntan tal cual. HEIC se convierte a JPEG antes de enviarlo; si el navegador no puede convertirlo, no se adjunta y se pide JPEG o PNG, porque el correo de Gmail no abre HEIC. El límite sigue siendo 6 fotos y 10 MB en total. No hay backend propio.
 - **Protección antispam:** el formulario incluye un campo trampa oculto (`_honey`).
 - **Privacidad:** los datos pasan por FormSubmit, un servicio de terceros. La política de privacidad debe mencionarlo.
 - **Cambiar de servicio:** basta con poner otra URL en `destinoFormulario` (Formspree, un backend propio…). Si el servicio exige otro formato de datos, se ajusta en `public/js/main.js`.
@@ -57,7 +57,7 @@ Campos que llegan al correo:
 - Sede u obra, dirección e indicaciones de acceso (opcionales), latitud, longitud y enlace de OpenStreetMap al punto confirmado
 - Códigos de fallo y comprobaciones realizadas (opcionales)
 - Descripción de la incidencia o de la pieza
-- Fotos opcionales (JPEG, PNG, WebP o HEIC; hasta 6 y 10 MB en total)
+- Fotos opcionales (JPEG, PNG o WebP; HEIC se convierte a JPEG; hasta 6 y 10 MB en total)
 - Aceptación del uso de los datos
 
 El asunto incluye el motivo, el tipo de máquina y el modelo.

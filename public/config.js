@@ -15,8 +15,9 @@ window.RDMP_CONFIG = {
   // Zona de cobertura en texto libre.
   zonaCobertura: "España (península y Baleares)",
 
-  // URL que recibe el formulario por POST. Ahora: FormSubmit, que reenvía
-  // cada solicitud al correo indicado al final de la URL.
+  // URL de FormSubmit. Puede llevar /ajax/: el envío usa el formulario
+  // normal, porque /ajax/ no confirma el resultado ni entrega la foto
+  // como un archivo que se pueda abrir.
   // Si se deja vacía pero hay correo, el botón preparará un correo en el programa
   // de correo del usuario (no se envía nada desde la web).
   // Si no hay ni destino ni correo, el formulario queda desactivado.

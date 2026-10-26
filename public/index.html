@@ -426,7 +426,7 @@
             </div>
             <div class="campo campo--ancho">
               <p class="campo__titulo" id="etiqueta-fotos">Adjuntar fotos <span class="opcional">(opcional)</span></p>
-              <p class="campo__ayuda" id="a-fotos">Fotos de la avería, la pieza o los códigos de fallo. JPEG, PNG, WebP o HEIC. Hasta 6 fotos y 10 MB en total, el límite de FormSubmit. Las fotos HEIC de iPhone se envían; si este navegador no puede mostrarlas, la miniatura lo indica.</p>
+              <p class="campo__ayuda" id="a-fotos">Fotos de la avería, la pieza o los códigos de fallo. JPEG, PNG o WebP, hasta 6 fotos y 10 MB en total. Se adjuntan al correo como archivos de imagen. Una foto HEIC de iPhone se convierte a JPEG; si este navegador no puede, hay que añadirla en JPEG o PNG.</p>
               <input id="f-fotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple tabindex="-1" class="visualmente-oculto">
               <button class="boton boton--secundario" type="button" id="anadir-fotos" aria-describedby="a-fotos e-fotos">Añadir fotos</button>
               <p class="campo__error" id="e-fotos" role="alert"></p>
@@ -447,6 +447,7 @@
           <p class="formulario__pie">Los campos marcados con <span aria-hidden="true">*</span> son obligatorios.</p>
           <button class="boton boton--primario boton--grande" type="submit" id="boton-enviar" disabled>Envío pendiente de activación</button>
         </form>
+        <iframe name="marco-envio" id="marco-envio" hidden title="Envío del formulario"></iframe>
       </div>
     </section>
   </main>

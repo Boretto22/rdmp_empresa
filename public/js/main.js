@@ -975,32 +975,92 @@
     });
   }
 
+  var preparandoFotos = 0;
+
+  function esHeic(file) {
+    var tipo = (file.type || "").toLowerCase();
+    var ext = extensionArchivo(file.name || "");
+    return tipo.indexOf("heic") !== -1 || tipo.indexOf("heif") !== -1 || ext === "heic" || ext === "heif";
+  }
+
+  function convertirHeic(file) {
+    return createImageBitmap(file).then(function (bitmap) {
+      var lienzo = document.createElement("canvas");
+      lienzo.width = bitmap.width;
+      lienzo.height = bitmap.height;
+      lienzo.getContext("2d").drawImage(bitmap, 0, 0);
+      if (bitmap.close) bitmap.close();
+      return new Promise(function (resolve, reject) {
+        lienzo.toBlob(function (blob) {
+          if (!blob) {
+            reject(new Error("vacio"));
+            return;
+          }
+          var base = (file.name || "foto").replace(/\.(heic|heif)$/i, "") || "foto";
+          resolve(new File([blob], base + ".jpg", { type: "image/jpeg", lastModified: file.lastModified || Date.now() }));
+        }, "image/jpeg", 0.92);
+      });
+    });
+  }
+
   function anadirFotos(lista) {
+    var pendientes = Array.prototype.slice.call(lista || []);
     var avisos = [];
-    Array.prototype.forEach.call(lista, function (file) {
+    preparandoFotos += pendientes.length;
+    function terminar() {
+      preparandoFotos = Math.max(0, preparandoFotos - 1);
+      if (preparandoFotos === 0) {
+        pintarFotos();
+        if (errorFotos) errorFotos.textContent = avisos.join(" ");
+      }
+    }
+    function siguiente() {
+      var file = pendientes.shift();
+      if (!file) return;
       if (!formatoAdmitido(file)) {
-        avisos.push(file.name + ": usa JPEG, PNG, WebP o HEIC.");
+        avisos.push((file.name || "Archivo") + ": usa JPEG, PNG, WebP o HEIC.");
+        terminar();
+        siguiente();
         return;
       }
       var repetida = fotos.some(function (foto) {
-        return foto.file.name === file.name && foto.file.size === file.size && foto.file.lastModified === file.lastModified;
+        return foto.origen === file.name && foto.tamanoOrigen === file.size && foto.modificadoOrigen === file.lastModified;
       });
       if (repetida) {
         avisos.push(file.name + " ya está añadida.");
+        terminar();
+        siguiente();
         return;
       }
-      if (fotos.length >= MAX_FOTOS) {
-        avisos.push(file.name + " no se ha añadido: el máximo es 6 fotos.");
-        return;
-      }
-      if (bytesFotos() + file.size > MAX_BYTES) {
-        avisos.push(file.name + " no se ha añadido: las fotos no pueden sumar más de 10 MB.");
-        return;
-      }
-      fotos.push({ id: ++idFoto, file: file, url: URL.createObjectURL(file) });
-    });
-    pintarFotos();
-    if (errorFotos) errorFotos.textContent = avisos.join(" ");
+      var preparado = esHeic(file) ? convertirHeic(file) : Promise.resolve(file);
+      preparado.then(function (listo) {
+        listo = archivoConExtension(listo);
+        if (fotos.length >= MAX_FOTOS) {
+          avisos.push(file.name + " no se ha añadido: el máximo es 6 fotos.");
+        } else if (bytesFotos() + listo.size > MAX_BYTES) {
+          avisos.push(file.name + " no se ha añadido: las fotos no pueden sumar más de 10 MB.");
+        } else {
+          fotos.push({
+            id: ++idFoto,
+            file: listo,
+            url: URL.createObjectURL(listo),
+            origen: file.name,
+            tamanoOrigen: file.size,
+            modificadoOrigen: file.lastModified,
+          });
+        }
+      }).catch(function () {
+        avisos.push(file.name + ": este navegador no puede convertir la foto HEIC. Añádela en JPEG o PNG para que se pueda abrir en el correo.");
+      }).then(function () {
+        terminar();
+        siguiente();
+      });
+    }
+    if (!pendientes.length) {
+      pintarFotos();
+      return;
+    }
+    siguiente();
   }
 
   function limpiarFotos() {
@@ -1033,32 +1093,96 @@
     bloqueados = [];
   }
 
-  function interpretarRespuesta(texto) {
-    if (!texto || !String(texto).trim()) return "no-confirmado";
-    var datos;
-    try { datos = JSON.parse(texto); } catch (e) { return "no-confirmado"; }
-    if (!datos || typeof datos !== "object") return "no-confirmado";
-    if (datos.success === true || datos.success === "true") return "aceptada";
-    if (datos.success === false || datos.success === "false") return "rechazada";
-    return "no-confirmado";
+  function urlFormulario(url) {
+    return String(url || "").replace("://formsubmit.co/ajax/", "://formsubmit.co/");
+  }
+
+  function archivoConExtension(file) {
+    var ext = extensionArchivo(file.name || "");
+    if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "webp") return file;
+    var tipo = (file.type || "").toLowerCase();
+    var nueva = tipo === "image/png" ? "png" : tipo === "image/webp" ? "webp" : "jpg";
+    var base = (file.name || "foto").replace(/\.[^.]+$/, "") || "foto";
+    return new File([file], base + "." + nueva, { type: file.type || "image/" + (nueva === "jpg" ? "jpeg" : nueva), lastModified: file.lastModified || Date.now() });
+  }
+
+  function enviarSolicitud(envio, archivos) {
+    var marco = document.getElementById("marco-envio");
+    var temporal = document.createElement("form");
+    temporal.method = "POST";
+    temporal.action = urlFormulario(destino);
+    temporal.enctype = "multipart/form-data";
+    temporal.acceptCharset = "UTF-8";
+    temporal.target = "marco-envio";
+    temporal.hidden = true;
+    Object.keys(envio).forEach(function (clave) {
+      var campo = document.createElement("input");
+      campo.type = "hidden";
+      campo.name = clave;
+      campo.value = envio[clave];
+      temporal.appendChild(campo);
+    });
+    var siguiente = document.createElement("input");
+    siguiente.type = "hidden";
+    siguiente.name = "_next";
+    siguiente.value = new URL("/enviado.html", window.location.origin).href;
+    temporal.appendChild(siguiente);
+    document.body.appendChild(temporal);
+    archivos.forEach(function (archivo, indice) {
+      var entrada = document.createElement("input");
+      entrada.type = "file";
+      entrada.name = indice === 0 ? "attachment" : "attachment_" + (indice + 1);
+      var transferencia = new DataTransfer();
+      transferencia.items.add(archivoConExtension(archivo));
+      entrada.files = transferencia.files;
+      temporal.appendChild(entrada);
+    });
+    return new Promise(function (resolve) {
+      var terminado = false;
+      var temporizador;
+      function acabar(resultado) {
+        if (terminado) return;
+        terminado = true;
+        window.removeEventListener("message", alMensaje);
+        marco.removeEventListener("load", alCargar);
+        clearTimeout(temporizador);
+        temporal.remove();
+        resolve(resultado);
+      }
+      function alMensaje(evento) {
+        if (evento.origin !== window.location.origin) return;
+        var datos = evento.data;
+        if (!datos || datos.origen !== "rdmp" || datos.tipo !== "formulario-aceptado") return;
+        acabar("aceptada");
+      }
+      function alCargar() {
+        try {
+          if (marco.contentWindow.location.href.indexOf("/enviado.html") !== -1) acabar("aceptada");
+        } catch (e) { /* La página de FormSubmit es de otro sitio; se espera la redirección. */ }
+      }
+      window.addEventListener("message", alMensaje);
+      marco.addEventListener("load", alCargar);
+      temporizador = setTimeout(function () { acabar("no-confirmado"); }, 90000);
+      temporal.submit();
+    });
   }
 
   function cerrarEnvio(resultado) {
     if (!enviando) return;
+    desbloquearFormulario();
     if (resultado === "aceptada") {
       form.reset();
       campos.forEach(function (c) { c.removeAttribute("aria-invalid"); });
       limpiarUbicacion();
       limpiarFotos();
     }
-    desbloquearFormulario();
     enviando = false;
     enviar.disabled = modo !== "destino";
     enviar.textContent = modo === "destino" ? "Enviar solicitud" : enviar.textContent;
     if (modo === "destino") enviar.disabled = false;
     if (resultado === "aceptada") {
       mostrarEstado("ok", "Solicitud aceptada",
-        "FormSubmit ha aceptado la solicitud. Esto no confirma que ya haya llegado al buzón de RDMP.", true);
+        "FormSubmit ha aceptado la solicitud y la envía al correo de RDMP. Si no aparece en la bandeja de entrada, revisa el spam.", true);
     } else if (resultado === "rechazada") {
       mostrarEstado("error", "FormSubmit no ha aceptado la solicitud",
         "Los datos, la ubicación y las fotos siguen en el formulario." + (correo ? " Puedes intentarlo de nuevo o escribir a " + correo + "." : " Puedes intentarlo de nuevo."), true);
@@ -1095,6 +1219,10 @@
     }
 
     if (enviando) return;
+    if (preparandoFotos) {
+      if (errorFotos) errorFotos.textContent = "Espera a que terminen de prepararse las fotos.";
+      return;
+    }
     enviando = true;
     bloquearFormulario();
     enviar.textContent = "Enviando…";
@@ -1117,37 +1245,15 @@
       "Comprobaciones realizadas": d.comprobaciones || "—",
       "Descripción de la incidencia o de la pieza": d.descripcion,
       "Acepta el uso de sus datos": "Sí",
-      "Fotos": fotos.length ? String(fotos.length) : "Ninguna",
+      "Fotos": fotos.length ? fotos.map(function (foto) { return foto.file.name; }).join(", ") : "Ninguna",
       _subject: "Solicitud RDMP — " + d.motivo + " — " + d.tipo + " " + d.modelo,
       _replyto: d.correo,
       _template: "table",
       _captcha: "false",
       _honey: form.elements._honey ? form.elements._honey.value : "",
     };
-    var cuerpo = new FormData();
-    Object.keys(envio).forEach(function (clave) { cuerpo.append(clave, envio[clave]); });
-    fotos.forEach(function (foto, indice) {
-      cuerpo.append("foto_" + (indice + 1), foto.file, foto.file.name);
-    });
-    var controlador = new AbortController();
-    var temporizador = setTimeout(function () { controlador.abort(); }, 45000);
-    fetch(destino, {
-      method: "POST",
-      body: cuerpo,
-      headers: { Accept: "application/json" },
-      signal: controlador.signal,
-    })
-      .then(function (r) {
-        return r.text().then(function (texto) {
-          return { httpOk: r.ok, juicio: interpretarRespuesta(texto) };
-        });
-      })
-      .then(function (resultado) {
-        if (!resultado.httpOk || resultado.juicio === "rechazada") cerrarEnvio("rechazada");
-        else cerrarEnvio(resultado.juicio);
-      })
-      .catch(function () { cerrarEnvio("no-confirmado"); })
-      .finally(function () { clearTimeout(temporizador); });
+    enviarSolicitud(envio, fotos.map(function (foto) { return foto.file; }))
+      .then(function (resultado) { cerrarEnvio(resultado); });
   });
 
 })();
