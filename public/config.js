@@ -15,18 +15,20 @@ window.RDMP_CONFIG = {
   // Zona de cobertura en texto libre.
   zonaCobertura: "España (península y Baleares)",
 
-  // URL que recibe el formulario por POST en JSON. Ahora: FormSubmit, que reenvía
+  // URL que recibe el formulario por POST. Ahora: FormSubmit, que reenvía
   // cada solicitud al correo indicado al final de la URL.
   // Si se deja vacía pero hay correo, el botón preparará un correo en el programa
   // de correo del usuario (no se envía nada desde la web).
   // Si no hay ni destino ni correo, el formulario queda desactivado.
   destinoFormulario: "https://formsubmit.co/ajax/rdmpmaquinaria@gmail.com",
 
-  // Clave de navegador de Google Maps JavaScript API. Vacía: el selector se abre,
-  // pero el mapa y el buscador no cargan hasta pegar aquí una clave autorizada.
-  // APIs, facturación y restricciones: README, «Selector de Google Maps».
-  claveMapsGoogle: "",
+  // Teselas del mapa. Vacío usa el servidor público de OpenStreetMap.
+  // No requiere cuenta ni clave. Política: https://operations.osmfoundation.org/policies/tiles/
+  // Si el tráfico deja de ser moderado, cambia esta URL por otro proveedor
+  // derivado de OpenStreetMap y actualiza atribucionCartografia.
+  urlCartografia: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
 
-  // Map ID de Google Cloud para el marcador avanzado. Vacío usa DEMO_MAP_ID.
-  mapaIdGoogle: "",
+  // HTML de la atribución. Con la URL estándar de OpenStreetMap se usa siempre
+  // «© OpenStreetMap contributors», aunque este texto se deje vacío.
+  atribucionCartografia: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };

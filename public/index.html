@@ -316,7 +316,7 @@
         </div>
 
         <form class="formulario" id="formulario" novalidate>
-          <div class="estado estado--pendiente" id="estado-formulario" role="status" aria-live="polite">
+          <div class="estado estado--pendiente" id="estado-formulario" role="status" aria-live="polite" tabindex="-1">
             <strong>Contacto pendiente de activación.</strong>
             <span>El formulario todavía no está conectado a ningún destino, así que no se enviará ningún mensaje.</span>
           </div>
@@ -381,28 +381,33 @@
 
             <fieldset class="ubicacion campo--ancho">
               <legend>Ubicación de la máquina <span class="obligatorio" aria-hidden="true">*</span></legend>
-              <p class="campo__ayuda" id="a-ubicacion">Selecciona en el mapa la sede, la obra o el punto exacto donde está la máquina.</p>
-              <button class="boton boton--secundario" type="button" id="abrir-selector" aria-describedby="a-ubicacion e-ubicacion">Seleccionar sede u obra en el mapa</button>
+              <p class="campo__ayuda" id="a-ubicacion">Marca en el mapa el punto exacto donde está la máquina. Buscar un municipio solo acerca la vista.</p>
+              <button class="boton boton--secundario" type="button" id="abrir-selector" aria-describedby="a-ubicacion e-ubicacion">Seleccionar ubicación en el mapa</button>
               <p class="campo__error" id="e-ubicacion"></p>
 
               <div class="ubicacion__tarjeta" id="tarjeta-ubicacion" hidden>
-                <p class="ubicacion__tarjeta-titulo" id="tarjeta-nombre"></p>
-                <p class="ubicacion__tarjeta-dir" id="tarjeta-direccion"></p>
+                <p class="ubicacion__tarjeta-titulo" id="tarjeta-nombre">Punto marcado en el mapa</p>
                 <p class="ubicacion__tarjeta-coords" id="tarjeta-coords"></p>
                 <button class="boton boton--secundario" type="button" id="cambiar-ubicacion">Cambiar ubicación</button>
               </div>
 
               <div class="campo">
-                <label for="f-indicaciones">Nombre de la obra o indicaciones de acceso <span class="opcional">(opcional)</span></label>
-                <input id="f-indicaciones" name="indicaciones" type="text" autocomplete="off" placeholder="Cantera norte, entrada de camiones, máquina junto a la nave" aria-describedby="a-indicaciones">
-                <p class="campo__ayuda" id="a-indicaciones">Sirve para precisar el acceso. No sustituye el punto elegido en el mapa.</p>
+                <label for="f-sede">Nombre de la sede u obra <span class="opcional">(opcional)</span></label>
+                <input id="f-sede" name="sede" type="text" autocomplete="organization" placeholder="Cantera norte, parque de maquinaria">
+              </div>
+              <div class="campo">
+                <label for="f-direccion">Dirección <span class="opcional">(opcional)</span></label>
+                <input id="f-direccion" name="direccion" type="text" autocomplete="street-address" aria-describedby="a-direccion">
+                <p class="campo__ayuda" id="a-direccion">Texto libre para quien recibe la solicitud.</p>
+              </div>
+              <div class="campo">
+                <label for="f-indicaciones">Indicaciones de acceso <span class="opcional">(opcional)</span></label>
+                <input id="f-indicaciones" name="indicaciones" type="text" autocomplete="off" placeholder="Entrada de camiones, máquina junto a la nave" aria-describedby="a-indicaciones">
+                <p class="campo__ayuda" id="a-indicaciones">Cómo llegar hasta la máquina una vez en el sitio.</p>
               </div>
 
-              <input type="hidden" name="lugar_nombre" id="f-lugar-nombre">
-              <input type="hidden" name="lugar_direccion" id="f-lugar-direccion">
               <input type="hidden" name="latitud" id="f-latitud">
               <input type="hidden" name="longitud" id="f-longitud">
-              <input type="hidden" name="place_id" id="f-place-id">
             </fieldset>
 
             <div class="campo campo--ancho">
@@ -418,6 +423,14 @@
             <div class="campo">
               <label for="f-comprobaciones">Comprobaciones realizadas <span class="opcional">(opcional)</span></label>
               <textarea id="f-comprobaciones" name="comprobaciones" rows="3"></textarea>
+            </div>
+            <div class="campo campo--ancho">
+              <p class="campo__titulo" id="etiqueta-fotos">Adjuntar fotos <span class="opcional">(opcional)</span></p>
+              <p class="campo__ayuda" id="a-fotos">Fotos de la avería, la pieza o los códigos de fallo. JPEG, PNG, WebP o HEIC. Hasta 6 fotos y 10 MB en total, el límite de FormSubmit. Las fotos HEIC de iPhone se envían; si este navegador no puede mostrarlas, la miniatura lo indica.</p>
+              <input id="f-fotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple tabindex="-1" class="visualmente-oculto">
+              <button class="boton boton--secundario" type="button" id="anadir-fotos" aria-describedby="a-fotos e-fotos">Añadir fotos</button>
+              <p class="campo__error" id="e-fotos" role="alert"></p>
+              <ul class="fotos" id="lista-fotos" aria-label="Fotos seleccionadas"></ul>
             </div>
             <div class="campo campo--ancho campo--casilla">
               <input id="f-privacidad" name="privacidad" type="checkbox" required aria-describedby="e-privacidad">
@@ -444,14 +457,21 @@
       <button class="dialogo-mapa__cerrar" type="button" data-cerrar-mapa aria-label="Cerrar sin guardar">×</button>
     </div>
     <div class="dialogo-mapa__cuerpo">
-      <p class="dialogo-mapa__ayuda" id="dialogo-mapa-ayuda">Busca la sede o la obra, pulsa el mapa, mueve el marcador o escribe las coordenadas. El centro inicial del mapa no cuenta como ubicación.</p>
+      <p class="dialogo-mapa__ayuda" id="dialogo-mapa-ayuda">Pulsa el mapa para marcar la máquina, arrastra el marcador o escribe las coordenadas. Buscar un municipio solo acerca la vista. El centro inicial no es una ubicación elegida. Las calles se cargan desde OpenStreetMap y necesitan conexión.</p>
       <p class="dialogo-mapa__aviso" id="aviso-mapa" role="status" hidden></p>
-      <div class="campo">
-        <label for="buscar-lugar">Buscar sede, empresa, dirección u obra</label>
-        <div class="dialogo-mapa__busqueda" id="contenedor-busqueda">
-          <input id="buscar-lugar" type="search" autocomplete="off" disabled placeholder="Buscar sede, empresa, dirección u obra">
+      <div class="campo dialogo-mapa__busqueda">
+        <label for="buscar-municipio">Buscar municipio</label>
+        <div class="municipios-ancla">
+          <input id="buscar-municipio" type="search" role="combobox" aria-expanded="false" aria-controls="lista-municipios" aria-autocomplete="list" autocomplete="off" placeholder="Municipio, por ejemplo Zaragoza" aria-describedby="a-municipio estado-busqueda">
+          <ul class="municipios" id="lista-municipios" role="listbox" hidden></ul>
         </div>
-        <p class="campo__error" id="estado-busqueda" role="status"></p>
+        <p class="campo__ayuda" id="a-municipio">Municipios de España en la península y Baleares. Si el nombre se repite, se indica la provincia o la isla.</p>
+        <p class="campo__ayuda" id="estado-busqueda" role="status"></p>
+      </div>
+      <div class="dialogo-mapa__vistas" role="group" aria-label="Vistas del mapa">
+        <button class="boton boton--secundario" type="button" id="vista-peninsula">Península</button>
+        <button class="boton boton--secundario" type="button" id="vista-baleares">Baleares</button>
+        <button class="boton boton--secundario" type="button" id="vista-todo">Ver todo</button>
       </div>
       <div class="dialogo-mapa__lienzo" id="lienzo-mapa" role="application" aria-label="Mapa para marcar la ubicación de la máquina"></div>
       <div class="dialogo-mapa__geo">

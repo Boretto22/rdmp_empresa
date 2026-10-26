@@ -7,8 +7,12 @@
   var telefono = limpiar(config.telefono);
   var zona = limpiar(config.zonaCobertura);
   var destino = limpiar(config.destinoFormulario);
-  var claveMaps = limpiar(config.claveMapsGoogle);
-  var mapaId = limpiar(config.mapaIdGoogle) || "DEMO_MAP_ID";
+  var URL_OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  var ATTR_OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">OpenStreetMap</a> contributors';
+  var urlCartografia = limpiar(config.urlCartografia) || URL_OSM;
+  var atribucionCartografia = urlCartografia === URL_OSM
+    ? ATTR_OSM
+    : (limpiar(config.atribucionCartografia) || "Proveedor de cartografía sin atribución configurada");
 
   /* ---------------- Navegación móvil ---------------- */
   var boton = document.querySelector(".menu-boton");
@@ -98,7 +102,6 @@
   var errorUbicacion = document.getElementById("e-ubicacion");
   var tarjeta = document.getElementById("tarjeta-ubicacion");
   var tarjetaNombre = document.getElementById("tarjeta-nombre");
-  var tarjetaDireccion = document.getElementById("tarjeta-direccion");
   var tarjetaCoords = document.getElementById("tarjeta-coords");
   var avisoMapa = document.getElementById("aviso-mapa");
   var estadoBusqueda = document.getElementById("estado-busqueda");
@@ -109,27 +112,45 @@
   var inputLng = document.getElementById("m-lng");
   var confirmarMapa = document.getElementById("confirmar-mapa");
   var lienzoMapa = document.getElementById("lienzo-mapa");
-  var contenedorBusqueda = document.getElementById("contenedor-busqueda");
-  var campoNombre = document.getElementById("f-lugar-nombre");
-  var campoDireccion = document.getElementById("f-lugar-direccion");
   var campoLat = document.getElementById("f-latitud");
   var campoLng = document.getElementById("f-longitud");
-  var campoPlace = document.getElementById("f-place-id");
+  var inputMunicipio = document.getElementById("buscar-municipio");
+  var listaMunicipios = document.getElementById("lista-municipios");
 
   var confirmada = null;
   var provisional = null;
   var disparador = null;
   var confirmadoAhora = false;
   var silenciarCoords = false;
-  var seqGeo = 0;
+  var sesionModal = 0;
+  var versionSeleccion = 0;
   var mapa = null;
   var marcador = null;
-  var Marcador = null;
-  var geocoder = null;
-  var mapsLista = false;
-  var mapsCargando = null;
+  var leafletCargando = null;
+  var municipios = null;
+  var municipiosCargando = null;
+  var indiceActivo = -1;
+  var encuadreAutomatico = true;
+  var movimientoPropio = false;
+  var cargasTeselas = 0;
+  var fallosTeselas = 0;
+  var avisoTeselas = false;
 
-  function mostrarEstado(tipo, titulo, texto) {
+  function marcarSeleccion() {
+    versionSeleccion += 1;
+    return { sesion: sesionModal, version: versionSeleccion };
+  }
+
+  function seleccionVigente(marca) {
+    return !!marca && marca.sesion === sesionModal && marca.version === versionSeleccion && !!(dialogo && dialogo.open);
+  }
+
+  function invalidarSeleccion() {
+    sesionModal += 1;
+    versionSeleccion += 1;
+  }
+
+  function mostrarEstado(tipo, titulo, texto, enfocar) {
     estado.className = "estado estado--" + tipo;
     estado.innerHTML = "";
     var t = document.createElement("strong");
@@ -138,6 +159,7 @@
     s.textContent = texto;
     estado.appendChild(t);
     estado.appendChild(s);
+    if (enfocar) estado.focus({ preventScroll: true });
   }
 
   if (modo === "destino") {
@@ -207,40 +229,37 @@
   });
 
   /* ---------------- Selector de ubicación ---------------- */
+  var VISTAS = {
+    todo: [[35.7, -9.8], [44.1, 4.6]],
+    peninsula: [[35.85, -9.55], [43.95, 3.45]],
+    baleares: [[38.55, 1.05], [40.15, 4.45]],
+  };
+
   function clonarPunto(p) {
-    if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return null;
-    return {
-      lat: p.lat,
-      lng: p.lng,
-      nombre: p.nombre || "",
-      direccion: p.direccion || "",
-      placeId: p.placeId || "",
-    };
+    if (!p || !coordsValidas(p.lat, p.lng)) return null;
+    return { lat: p.lat, lng: p.lng };
   }
 
   function coordsValidas(lat, lng) {
     return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   }
 
+  function redondearCoord(n) {
+    return Math.round(n * 1000000) / 1000000;
+  }
+
   function formatearNumero(n) {
-    return String(Math.round(n * 1000000) / 1000000);
+    return String(redondearCoord(n));
   }
 
-  function urlMaps(lat, lng) {
-    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(lat + "," + lng);
+  function urlOsm(lat, lng) {
+    var la = String(lat);
+    var ln = String(lng);
+    return "https://www.openstreetmap.org/?mlat=" + encodeURIComponent(la) + "&mlon=" + encodeURIComponent(ln) + "#map=17/" + la + "/" + ln;
   }
 
-  function textoLugar(place) {
-    var n = place && place.displayName;
-    if (!n) return "";
-    return typeof n === "string" ? n : (n.text || "");
-  }
-
-  function leerLatLng(valor) {
-    if (!valor) return null;
-    if (typeof valor.lat === "function") return { lat: valor.lat(), lng: valor.lng() };
-    if (Number.isFinite(valor.lat) && Number.isFinite(valor.lng)) return { lat: valor.lat, lng: valor.lng };
-    return null;
+  function normalizarTexto(valor) {
+    return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   }
 
   function escribirCoords(lat, lng) {
@@ -259,11 +278,7 @@
       confirmarMapa.disabled = true;
       return;
     }
-    var partes = [];
-    if (provisional.nombre) partes.push(provisional.nombre);
-    if (provisional.direccion) partes.push(provisional.direccion);
-    partes.push(formatearNumero(provisional.lat) + ", " + formatearNumero(provisional.lng));
-    resumenPunto.textContent = partes.join(" · ");
+    resumenPunto.textContent = formatearNumero(provisional.lat) + ", " + formatearNumero(provisional.lng);
     confirmarMapa.disabled = false;
   }
 
@@ -274,109 +289,78 @@
       return;
     }
     tarjeta.hidden = false;
-    tarjetaNombre.textContent = confirmada.nombre || "Punto marcado en el mapa";
-    tarjetaDireccion.textContent = confirmada.direccion
-      ? confirmada.direccion
-      : "Sin dirección postal. La solicitud guardará las coordenadas.";
+    tarjetaNombre.textContent = "Punto marcado en el mapa";
     tarjetaCoords.textContent = formatearNumero(confirmada.lat) + ", " + formatearNumero(confirmada.lng);
     abrirSelector.removeAttribute("aria-invalid");
     errorUbicacion.textContent = "";
   }
 
   function volcarConfirmada() {
-    campoNombre.value = confirmada && confirmada.nombre ? confirmada.nombre : "";
-    campoDireccion.value = confirmada && confirmada.direccion ? confirmada.direccion : "";
     campoLat.value = confirmada ? String(confirmada.lat) : "";
     campoLng.value = confirmada ? String(confirmada.lng) : "";
-    campoPlace.value = confirmada && confirmada.placeId ? confirmada.placeId : "";
     pintarTarjeta();
   }
 
-  function sincronizarMarcador() {
-    if (!mapa || !window.google) return;
+  function quitarMarcador() {
+    if (marcador && mapa) mapa.removeLayer(marcador);
+    marcador = null;
+  }
+
+  function colocarMarcador(enfocar) {
+    if (!mapa || !window.L) return;
     if (!provisional || !coordsValidas(provisional.lat, provisional.lng)) {
-      if (marcador) marcador.map = null;
+      quitarMarcador();
       return;
     }
-    var pos = { lat: provisional.lat, lng: provisional.lng };
-    mapa.setCenter(pos);
-    mapa.setZoom(Math.max(mapa.getZoom() || 0, 16));
+    var ll = [provisional.lat, provisional.lng];
     if (!marcador) {
-      marcador = new Marcador({
-        map: mapa,
-        position: pos,
-        gmpDraggable: true,
+      marcador = window.L.marker(ll, {
+        icon: iconoPin(),
+        draggable: true,
+        autoPan: true,
+        keyboard: true,
         title: "Ubicación de la máquina",
-      });
-      marcador.addListener("dragend", function () {
-        var ll = leerLatLng(marcador.position);
-        if (ll) fijarPuntoLibre(ll.lat, ll.lng);
+        alt: "Ubicación de la máquina",
+      }).addTo(mapa);
+      marcador.on("dragend", function () {
+        var p = marcador.getLatLng();
+        fijarPunto(p.lat, p.lng, false);
       });
     } else {
-      marcador.map = mapa;
-      marcador.position = pos;
+      marcador.setLatLng(ll);
+    }
+    if (enfocar) {
+      moverMapa(function () {
+        mapa.setView(ll, mapa.getZoom() < 15 ? 16 : mapa.getZoom(), { animate: !reducirMovimiento() });
+      });
     }
   }
 
-  function aplicarVistaProvisional() {
-    if (provisional && coordsValidas(provisional.lat, provisional.lng)) escribirCoords(provisional.lat, provisional.lng);
-    else {
-      silenciarCoords = true;
-      inputLat.value = "";
-      inputLng.value = "";
-      silenciarCoords = false;
-      errorCoordsModal.textContent = "";
-    }
-    pintarResumen();
-    sincronizarMarcador();
-    if (mapa && window.google && window.google.maps && window.google.maps.event) {
-      window.google.maps.event.trigger(mapa, "resize");
-    }
+  function reducirMovimiento() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  function fijarPuntoLibre(lat, lng) {
+  function margenVista() {
+    var tam = mapa && mapa.getSize();
+    if (!tam || tam.y < 360) return [12, 12];
+    return [28, 28];
+  }
+
+  function moverMapa(fn) {
+    movimientoPropio = true;
+    try { fn(); }
+    finally { movimientoPropio = false; }
+  }
+
+  function fijarPunto(lat, lng, enfocar) {
     if (!coordsValidas(lat, lng)) return;
-    var id = ++seqGeo;
-    provisional = { lat: lat, lng: lng, nombre: "", direccion: "", placeId: "" };
-    escribirCoords(lat, lng);
+    marcarSeleccion();
+    encuadreAutomatico = false;
+    provisional = { lat: redondearCoord(lat), lng: redondearCoord(lng) };
+    estadoGeo.textContent = "";
+    escribirCoords(provisional.lat, provisional.lng);
     pintarResumen();
-    sincronizarMarcador();
-    if (!geocoder) return;
-    geocoder.geocode({ location: { lat: lat, lng: lng } }).then(function (respuesta) {
-      if (id !== seqGeo || !provisional) return;
-      if (provisional.lat !== lat || provisional.lng !== lng) return;
-      var resultado = respuesta && respuesta.results && respuesta.results[0];
-      provisional.nombre = "";
-      provisional.direccion = resultado && resultado.formatted_address ? resultado.formatted_address : "";
-      provisional.placeId = resultado && resultado.place_id ? resultado.place_id : "";
-      pintarResumen();
-    }).catch(function () {
-      if (id !== seqGeo || !provisional) return;
-      provisional.direccion = "";
-      provisional.placeId = "";
-      pintarResumen();
-    });
-  }
-
-  function aplicarLugar(place) {
-    var ll = leerLatLng(place.location);
-    if (!ll || !coordsValidas(ll.lat, ll.lng)) {
-      estadoBusqueda.textContent = "Ese resultado no tiene un punto utilizable. Márcalo en el mapa.";
-      return;
-    }
-    seqGeo += 1;
-    estadoBusqueda.textContent = "";
-    provisional = {
-      lat: ll.lat,
-      lng: ll.lng,
-      nombre: textoLugar(place),
-      direccion: place.formattedAddress || "",
-      placeId: place.id || "",
-    };
-    escribirCoords(ll.lat, ll.lng);
-    pintarResumen();
-    if (mapa) mapa.setZoom(17);
-    sincronizarMarcador();
+    colocarMarcador(enfocar);
   }
 
   function leerCoordsEscritas() {
@@ -388,24 +372,27 @@
     var lng = Number(lngTxt);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { error: "formato" };
     if (!coordsValidas(lat, lng)) return { error: "rango" };
-    return { lat: lat, lng: lng };
+    return { lat: redondearCoord(lat), lng: redondearCoord(lng) };
   }
 
   function alEditarCoords() {
     if (silenciarCoords) return;
+    estadoGeo.textContent = "";
     var leido = leerCoordsEscritas();
     if (leido.vacio) {
-      seqGeo += 1;
+      marcarSeleccion();
+      encuadreAutomatico = false;
       provisional = null;
-      if (marcador) marcador.map = null;
+      quitarMarcador();
       errorCoordsModal.textContent = "";
       pintarResumen();
       return;
     }
     if (leido.error) {
-      seqGeo += 1;
+      marcarSeleccion();
+      encuadreAutomatico = false;
       provisional = null;
-      if (marcador) marcador.map = null;
+      quitarMarcador();
       inputLat.setAttribute("aria-invalid", "true");
       inputLng.setAttribute("aria-invalid", "true");
       errorCoordsModal.textContent = leido.error === "rango"
@@ -415,138 +402,313 @@
       return;
     }
     if (provisional && provisional.lat === leido.lat && provisional.lng === leido.lng) return;
-    fijarPuntoLibre(leido.lat, leido.lng);
+    fijarPunto(leido.lat, leido.lng, true);
   }
 
   inputLat.addEventListener("input", alEditarCoords);
   inputLng.addEventListener("input", alEditarCoords);
 
-  function prepararBuscador(libs) {
-    if (contenedorBusqueda.querySelector("gmp-place-autocomplete")) return;
-    var elemento = new libs.PlaceAutocompleteElement({ includedRegionCodes: ["es"] });
-    elemento.id = "buscar-lugar";
-    elemento.placeholder = "Buscar sede, empresa, dirección u obra";
-    elemento.setAttribute("aria-label", "Buscar sede, empresa, dirección u obra");
-    contenedorBusqueda.textContent = "";
-    contenedorBusqueda.appendChild(elemento);
-    elemento.addEventListener("gmp-select", function (ev) {
-      var prediction = ev.placePrediction || (ev.detail && ev.detail.placePrediction);
-      if (!prediction || typeof prediction.toPlace !== "function") return;
-      var place = prediction.toPlace();
-      place.fetchFields({ fields: ["displayName", "formattedAddress", "location", "id"] }).then(function () {
-        aplicarLugar(place);
-      }).catch(function () {
-        estadoBusqueda.textContent = "No se ha podido cargar ese resultado. Prueba con otro o marca el punto en el mapa.";
-      });
-    });
-    elemento.addEventListener("gmp-placeselect", function (ev) {
-      if (ev.place) aplicarLugar(ev.place);
-    });
-    elemento.addEventListener("gmp-error", function () {
-      estadoBusqueda.textContent = "No se han encontrado resultados. Puedes marcar el punto directamente en el mapa.";
+  function aplicarEncuadreInicial() {
+    if (!mapa) return;
+    mapa.invalidateSize();
+    var tam = mapa.getSize();
+    if (!tam || tam.x < 20 || tam.y < 20) return;
+    if (!encuadreAutomatico) return;
+    moverMapa(function () {
+      if (provisional && coordsValidas(provisional.lat, provisional.lng)) {
+        mapa.setView([provisional.lat, provisional.lng], 16, { animate: false });
+      } else {
+        mapa.fitBounds(VISTAS.todo, { padding: margenVista(), animate: false });
+      }
     });
   }
 
-  function iniciarMapa(libs) {
-    if (mapa) return;
-    Marcador = libs.AdvancedMarkerElement;
+  function aplicarVista(clave) {
+    if (!mapa || !VISTAS[clave]) return;
+    marcarSeleccion();
+    encuadreAutomatico = false;
+    moverMapa(function () {
+      mapa.fitBounds(VISTAS[clave], { padding: margenVista(), animate: !reducirMovimiento() });
+    });
+  }
+
+  document.getElementById("vista-peninsula").addEventListener("click", function () { aplicarVista("peninsula"); });
+  document.getElementById("vista-baleares").addEventListener("click", function () { aplicarVista("baleares"); });
+  document.getElementById("vista-todo").addEventListener("click", function () { aplicarVista("todo"); });
+
+  function etiquetaMunicipio(m) {
+    var nombre = m.nombre;
+    if (m.local && normalizarTexto(m.local) !== normalizarTexto(m.nombre)) nombre += " (" + m.local + ")";
+    return nombre + " · " + m.contexto;
+  }
+
+  function cargarMunicipios() {
+    if (municipios) return Promise.resolve(municipios);
+    if (municipiosCargando) return municipiosCargando;
+    municipiosCargando = fetch("datos/municipios.json").then(function (r) {
+      if (!r.ok) throw new Error("listado");
+      return r.json();
+    }).then(function (datos) {
+      var lista = datos && datos.municipios;
+      if (!Array.isArray(lista)) throw new Error("listado");
+      municipios = lista.map(function (m) {
+        return {
+          nombre: m[0],
+          contexto: m[1],
+          lat: m[2],
+          lng: m[3],
+          local: m[4] || "",
+          clave: normalizarTexto(m[0] + " " + (m[4] || "") + " " + m[1]),
+        };
+      });
+      return municipios;
+    }).catch(function () {
+      municipiosCargando = null;
+      estadoBusqueda.textContent = "No se ha podido cargar el listado de municipios. Puedes marcar el punto en el mapa o escribir las coordenadas.";
+      return null;
+    });
+    return municipiosCargando;
+  }
+
+  function buscarMunicipios(consulta) {
+    var n = normalizarTexto(consulta);
+    if (n.length < 2 || !municipios) return [];
+    var prefijo = [];
+    var contiene = [];
+    municipios.forEach(function (m) {
+      var nombre = normalizarTexto(m.nombre);
+      var local = m.local ? normalizarTexto(m.local) : "";
+      if (nombre.indexOf(n) === 0 || (local && local.indexOf(n) === 0)) prefijo.push(m);
+      else if (m.clave.indexOf(n) !== -1) contiene.push(m);
+    });
+    return prefijo.concat(contiene).slice(0, 8);
+  }
+
+  function cerrarLista() {
+    listaMunicipios.hidden = true;
+    listaMunicipios.textContent = "";
+    inputMunicipio.setAttribute("aria-expanded", "false");
+    inputMunicipio.removeAttribute("aria-activedescendant");
+    indiceActivo = -1;
+  }
+
+  function marcarOpcion(indice) {
+    var opciones = listaMunicipios.querySelectorAll("[role='option']");
+    if (!opciones.length) return;
+    if (indice < 0) indice = opciones.length - 1;
+    if (indice >= opciones.length) indice = 0;
+    indiceActivo = indice;
+    Array.prototype.forEach.call(opciones, function (op, i) {
+      var activo = i === indiceActivo;
+      op.setAttribute("aria-selected", activo ? "true" : "false");
+      if (activo) {
+        inputMunicipio.setAttribute("aria-activedescendant", op.id);
+        op.scrollIntoView({ block: "nearest" });
+      }
+    });
+  }
+
+  function pintarResultados(consulta) {
+    var encontrados = buscarMunicipios(consulta);
+    listaMunicipios.textContent = "";
+    indiceActivo = -1;
+    if (normalizarTexto(consulta).length < 2) {
+      cerrarLista();
+      return;
+    }
+    if (!municipios) return;
+    if (!encontrados.length) {
+      cerrarLista();
+      estadoBusqueda.textContent = "Ningún municipio coincide. Prueba con otro nombre o marca el punto en el mapa.";
+      return;
+    }
+    estadoBusqueda.textContent = encontrados.length + (encontrados.length === 1 ? " municipio." : " municipios.");
+    encontrados.forEach(function (m, i) {
+      var li = document.createElement("li");
+      var botonOpcion = document.createElement("button");
+      botonOpcion.type = "button";
+      botonOpcion.id = "municipio-opcion-" + i;
+      botonOpcion.setAttribute("role", "option");
+      botonOpcion.setAttribute("aria-selected", "false");
+      botonOpcion.tabIndex = -1;
+      botonOpcion.textContent = etiquetaMunicipio(m);
+      botonOpcion.addEventListener("click", function () { elegirMunicipio(m); });
+      li.appendChild(botonOpcion);
+      listaMunicipios.appendChild(li);
+    });
+    listaMunicipios.hidden = false;
+    inputMunicipio.setAttribute("aria-expanded", "true");
+  }
+
+  function elegirMunicipio(m) {
+    inputMunicipio.value = etiquetaMunicipio(m);
+    cerrarLista();
+    marcarSeleccion();
+    encuadreAutomatico = false;
+    estadoBusqueda.textContent = "Mapa centrado en " + etiquetaMunicipio(m) + ". Marca el punto exacto de la máquina.";
+    if (mapa) {
+      moverMapa(function () {
+        mapa.setView([m.lat, m.lng], 13, { animate: !reducirMovimiento() });
+      });
+    }
+  }
+
+  inputMunicipio.addEventListener("input", function () {
+    var consulta = inputMunicipio.value;
+    if (normalizarTexto(consulta).length < 2) {
+      cerrarLista();
+      estadoBusqueda.textContent = "";
+      return;
+    }
+    if (!municipios) {
+      estadoBusqueda.textContent = "Cargando municipios…";
+      cargarMunicipios().then(function () {
+        if (inputMunicipio.value === consulta) pintarResultados(consulta);
+      });
+      return;
+    }
+    pintarResultados(consulta);
+  });
+
+  inputMunicipio.addEventListener("keydown", function (e) {
+    if (listaMunicipios.hidden) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      marcarOpcion(indiceActivo + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      marcarOpcion(indiceActivo - 1);
+    } else if (e.key === "Enter") {
+      var opciones = listaMunicipios.querySelectorAll("[role='option']");
+      var elegido = indiceActivo >= 0 ? indiceActivo : 0;
+      if (opciones[elegido]) {
+        e.preventDefault();
+        opciones[elegido].click();
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      cerrarLista();
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!dialogo.open || listaMunicipios.hidden) return;
+    if (e.target.closest(".dialogo-mapa__busqueda")) return;
+    cerrarLista();
+  });
+
+  function avisarTeselas() {
+    if (avisoTeselas || fallosTeselas < 2 || cargasTeselas > 0) return;
+    avisoTeselas = true;
+    avisoMapa.hidden = false;
+    avisoMapa.textContent = urlCartografia === URL_OSM
+      ? "No se ha podido cargar la cartografía de OpenStreetMap. Puedes escribir la latitud y la longitud, y marcar el punto si el mapa llega a mostrarse. Este servicio público no ofrece uso sin conexión ni disponibilidad garantizada."
+      : "No se ha podido cargar la cartografía configurada. Puedes escribir la latitud y la longitud.";
+  }
+
+  function iconoPin() {
+    return window.L.icon({
+      iconUrl: "assets/img/pin-ubicacion.png",
+      iconSize: [48, 68],
+      iconAnchor: [24, 68],
+      className: "rdmp-pin",
+    });
+  }
+
+  function iniciarMapa() {
+    if (mapa || !window.L) return;
     lienzoMapa.classList.remove("vacio");
     lienzoMapa.textContent = "";
-    mapa = new libs.Map(lienzoMapa, {
-      center: { lat: 40.2, lng: -3.7 },
-      zoom: 6,
-      mapId: mapaId,
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: false,
-      clickableIcons: true,
-      gestureHandling: "greedy",
+    mapa = window.L.map(lienzoMapa, {
+      zoomControl: true,
+      attributionControl: true,
+      keyboard: true,
+      scrollWheelZoom: true,
+      dragging: true,
+      touchZoom: true,
+      minZoom: 4,
+      maxZoom: 19,
     });
-    mapa.addListener("click", function (ev) {
-      if (ev.placeId && libs.Place) {
-        if (typeof ev.stop === "function") ev.stop();
-        var place = new libs.Place({ id: ev.placeId });
-        place.fetchFields({ fields: ["displayName", "formattedAddress", "location", "id"] }).then(function () {
-          aplicarLugar(place);
-        }).catch(function () {
-          var ll = leerLatLng(ev.latLng);
-          if (ll) fijarPuntoLibre(ll.lat, ll.lng);
-        });
-        return;
+    mapa.on("movestart", function () {
+      if (!movimientoPropio) encuadreAutomatico = false;
+    });
+    window.L.tileLayer(urlCartografia, {
+      attribution: atribucionCartografia,
+      maxZoom: 19,
+      detectRetina: false,
+    }).on("tileload", function () {
+      cargasTeselas += 1;
+      if (avisoTeselas) {
+        avisoTeselas = false;
+        avisoMapa.hidden = true;
       }
-      var ll = leerLatLng(ev.latLng);
-      if (ll) fijarPuntoLibre(ll.lat, ll.lng);
+    }).on("tileerror", function () {
+      fallosTeselas += 1;
+      avisarTeselas();
+    }).addTo(mapa);
+    mapa.on("click", function (ev) {
+      if (!ev.latlng) return;
+      fijarPunto(ev.latlng.lat, ev.latlng.lng, mapa.getZoom() < 15);
     });
-    geocoder = new libs.Geocoder();
-    prepararBuscador(libs);
-    aplicarVistaProvisional();
+    aplicarEncuadreInicial();
+    colocarMarcador(false);
   }
 
-  function instalarCargador() {
-    if (window.google && window.google.maps && window.google.maps.importLibrary) return;
-    var w = window;
-    var googleNs = w.google = w.google || {};
-    var maps = googleNs.maps = googleNs.maps || {};
-    var pendientes = new Set();
-    var promesa = null;
-    maps.importLibrary = function (nombre) {
-      pendientes.add(nombre);
-      promesa = promesa || new Promise(function (ok, fail) {
-        setTimeout(function () {
-          var script = document.createElement("script");
-          var params = new URLSearchParams();
-          params.set("libraries", Array.from(pendientes).join(","));
-          params.set("key", claveMaps);
-          params.set("v", "weekly");
-          params.set("callback", "google.maps.__ib__");
-          script.src = "https://maps.googleapis.com/maps/api/js?" + params.toString();
-          script.async = true;
-          maps.__ib__ = ok;
-          script.onerror = function () {
-            promesa = null;
-            fail(new Error("No se ha podido cargar Google Maps"));
-          };
-          document.head.appendChild(script);
-        }, 0);
-      });
-      return promesa.then(function () { return maps.importLibrary(nombre); });
-    };
+  function cargarHoja(href) {
+    if (document.querySelector('link[href="' + href + '"]')) return Promise.resolve();
+    return new Promise(function (ok) {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.onload = function () { ok(); };
+      link.onerror = function () { ok(); };
+      document.head.appendChild(link);
+    });
+  }
+
+  function cargarLeaflet() {
+    if (window.L && typeof window.L.map === "function") return Promise.resolve();
+    if (window.leaflet && typeof window.leaflet.map === "function") {
+      window.L = window.leaflet;
+      return Promise.resolve();
+    }
+    if (leafletCargando) return leafletCargando;
+    leafletCargando = Promise.all([
+      cargarHoja("vendor/leaflet/leaflet.css"),
+      new Promise(function (ok, fail) {
+        var script = document.createElement("script");
+        script.src = "vendor/leaflet/leaflet.js";
+        script.onload = function () { ok(); };
+        script.onerror = function () { fail(new Error("leaflet")); };
+        document.body.appendChild(script);
+      }),
+    ]).then(function () {
+      if (!window.L && window.leaflet) window.L = window.leaflet;
+      if (!window.L || typeof window.L.map !== "function") throw new Error("leaflet");
+    }).catch(function (err) {
+      leafletCargando = null;
+      throw err;
+    });
+    return leafletCargando;
   }
 
   function cargarMapa() {
-    if (!claveMaps) {
-      avisoMapa.hidden = false;
-      avisoMapa.textContent = "Falta la clave de Google Maps. El mapa y el buscador no pueden cargarse todavía. Puedes escribir la latitud y la longitud y confirmar el punto en esta ventana.";
-      lienzoMapa.classList.add("vacio");
-      lienzoMapa.textContent = "Mapa no disponible hasta configurar la clave de API.";
-      return Promise.resolve();
-    }
     if (mapa) return Promise.resolve();
-    if (mapsCargando) return mapsCargando;
-    instalarCargador();
-    mapsCargando = Promise.all([
-      window.google.maps.importLibrary("maps"),
-      window.google.maps.importLibrary("marker"),
-      window.google.maps.importLibrary("places"),
-      window.google.maps.importLibrary("geocoding"),
-    ]).then(function (libs) {
-      mapsLista = true;
-      avisoMapa.hidden = true;
-      iniciarMapa({
-        Map: libs[0].Map,
-        AdvancedMarkerElement: libs[1].AdvancedMarkerElement,
-        PlaceAutocompleteElement: libs[2].PlaceAutocompleteElement,
-        Place: libs[2].Place,
-        Geocoder: libs[3].Geocoder,
-      });
+    avisoMapa.hidden = false;
+    avisoMapa.textContent = "Cargando mapa…";
+    return Promise.all([cargarLeaflet(), cargarMunicipios()]).then(function () {
+      if (!dialogo.open) return;
+      iniciarMapa();
+      if (!avisoTeselas) avisoMapa.hidden = true;
     }).catch(function () {
-      mapsCargando = null;
       avisoMapa.hidden = false;
-      avisoMapa.textContent = "No se ha podido cargar Google Maps. Los demás datos del formulario se conservan. Puedes escribir la latitud y la longitud y confirmar el punto.";
-      lienzoMapa.classList.add("vacio");
-      lienzoMapa.textContent = "No se ha podido cargar el mapa.";
+      avisoMapa.textContent = "No se ha podido cargar el mapa. Los datos del formulario se conservan. Escribe la latitud y la longitud para indicar el punto.";
+      if (!mapa) {
+        lienzoMapa.classList.add("vacio");
+        lienzoMapa.textContent = "El mapa no está disponible. Usa la latitud y la longitud.";
+      }
     });
-    return mapsCargando;
   }
 
   function abrirDialogo(desde) {
@@ -555,15 +717,31 @@
       return;
     }
     disparador = desde || abrirSelector;
-    seqGeo += 1;
+    invalidarSeleccion();
+    encuadreAutomatico = true;
     provisional = clonarPunto(confirmada);
     estadoBusqueda.textContent = "";
     estadoGeo.textContent = "";
     errorCoordsModal.textContent = "";
+    cerrarLista();
     dialogo.showModal();
-    aplicarVistaProvisional();
+    if (provisional) escribirCoords(provisional.lat, provisional.lng);
+    else {
+      silenciarCoords = true;
+      inputLat.value = "";
+      inputLng.value = "";
+      silenciarCoords = false;
+    }
+    pintarResumen();
     cargarMapa().then(function () {
-      if (dialogo.open) aplicarVistaProvisional();
+      if (!dialogo.open) return;
+      colocarMarcador(false);
+      aplicarEncuadreInicial();
+      window.setTimeout(function () {
+        if (!dialogo.open) return;
+        colocarMarcador(false);
+        aplicarEncuadreInicial();
+      }, 200);
     });
   }
 
@@ -573,10 +751,17 @@
   dialogo.querySelectorAll("[data-cerrar-mapa]").forEach(function (el) {
     el.addEventListener("click", function () { dialogo.close(); });
   });
+  dialogo.addEventListener("cancel", function (e) {
+    if (!listaMunicipios.hidden) {
+      e.preventDefault();
+      cerrarLista();
+    }
+  });
   dialogo.addEventListener("close", function () {
     if (!confirmadoAhora) provisional = null;
     confirmadoAhora = false;
-    seqGeo += 1;
+    invalidarSeleccion();
+    cerrarLista();
     if (disparador && typeof disparador.focus === "function") disparador.focus();
   });
   confirmarMapa.addEventListener("click", function () {
@@ -596,11 +781,16 @@
       estadoGeo.textContent = "Este dispositivo no ofrece geolocalización. Marca el punto en el mapa o escribe las coordenadas.";
       return;
     }
+    var marca = marcarSeleccion();
     estadoGeo.textContent = "Solicitando ubicación…";
     navigator.geolocation.getCurrentPosition(function (pos) {
-      estadoGeo.textContent = "Ubicación obtenida. Ajusta el marcador si hace falta y pulsa «Confirmar ubicación».";
-      fijarPuntoLibre(pos.coords.latitude, pos.coords.longitude);
+      if (!seleccionVigente(marca)) return;
+      fijarPunto(pos.coords.latitude, pos.coords.longitude, true);
+      if (dialogo && dialogo.open) {
+        estadoGeo.textContent = "Ubicación obtenida. Ajusta el marcador si hace falta y pulsa «Confirmar ubicación».";
+      }
     }, function (err) {
+      if (!seleccionVigente(marca)) return;
       if (err && err.code === 1) {
         estadoGeo.textContent = "No se ha concedido el permiso de ubicación. Marca el punto en el mapa o escribe las coordenadas.";
       } else {
@@ -609,6 +799,18 @@
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
   });
 
+  window.addEventListener("resize", function () {
+    if (dialogo.open && mapa) mapa.invalidateSize();
+  });
+  window.addEventListener("orientationchange", function () {
+    if (dialogo.open && mapa) window.setTimeout(function () { mapa.invalidateSize(); }, 150);
+  });
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () {
+      if (dialogo.open && mapa) mapa.invalidateSize();
+    }).observe(lienzoMapa);
+  }
+
   function validarUbicacion() {
     if (confirmada && coordsValidas(confirmada.lat, confirmada.lng)) {
       abrirSelector.removeAttribute("aria-invalid");
@@ -616,16 +818,16 @@
       return true;
     }
     abrirSelector.setAttribute("aria-invalid", "true");
-    errorUbicacion.textContent = "Selecciona en el mapa la sede, la obra o el punto donde está la máquina.";
+    errorUbicacion.textContent = "Marca en el mapa el punto donde está la máquina.";
     return false;
   }
 
   function limpiarUbicacion() {
     confirmada = null;
     provisional = null;
-    seqGeo += 1;
+    invalidarSeleccion();
     volcarConfirmada();
-    if (marcador) marcador.map = null;
+    quitarMarcador();
   }
 
   /* ---------------- Envío ---------------- */
@@ -634,15 +836,10 @@
     return el ? limpiar(el.value) : "";
   }
 
-  function referenciaLugar(d) {
-    if (d.nombreLugar) return d.nombreLugar;
-    if (d.indicaciones) return d.indicaciones;
-    return "Punto marcado en el mapa";
-  }
-
   function datosFormulario() {
     var lat = confirmada ? confirmada.lat : null;
     var lng = confirmada ? confirmada.lng : null;
+    var hay = coordsValidas(lat, lng);
     return {
       motivo: valor("motivo"),
       nombre: valor("nombre"),
@@ -652,13 +849,12 @@
       modelo: valor("marca_modelo"),
       serie: valor("numero_serie"),
       horas: valor("horas"),
-      nombreLugar: confirmada ? confirmada.nombre : "",
-      direccion: confirmada ? confirmada.direccion : "",
-      latitud: coordsValidas(lat, lng) ? String(lat) : "",
-      longitud: coordsValidas(lat, lng) ? String(lng) : "",
-      placeId: confirmada ? confirmada.placeId : "",
+      sede: valor("sede"),
+      direccion: valor("direccion"),
+      latitud: hay ? String(lat) : "",
+      longitud: hay ? String(lng) : "",
       indicaciones: valor("indicaciones"),
-      enlaceMaps: coordsValidas(lat, lng) ? urlMaps(lat, lng) : "",
+      enlaceOsm: hay ? urlOsm(lat, lng) : "",
       descripcion: valor("descripcion"),
       codigos: valor("codigos_fallo"),
       comprobaciones: valor("comprobaciones"),
@@ -675,20 +871,202 @@
       "Marca y modelo: " + d.modelo,
       "Número de serie o PIN: " + (d.serie || "—"),
       "Horas de máquina: " + (d.horas || "—"),
-      "Referencia de la sede u obra: " + referenciaLugar(d),
-      "Nombre del establecimiento: " + (d.nombreLugar || "—"),
+      "Sede u obra: " + (d.sede || "—"),
       "Dirección: " + (d.direccion || "—"),
       "Latitud: " + (d.latitud || "—"),
       "Longitud: " + (d.longitud || "—"),
-      "Google place ID: " + (d.placeId || "—"),
       "Indicaciones de acceso: " + (d.indicaciones || "—"),
-      "Enlace de Google Maps: " + (d.enlaceMaps || "—"),
+      "Enlace de OpenStreetMap: " + (d.enlaceOsm || "—"),
+      "Fotos: " + (fotos.length ? fotos.map(function (f) { return f.file.name; }).join(", ") + ". No se adjuntan al correo preparado; hay que añadirlas manualmente." : "—"),
       "Códigos de fallo: " + (d.codigos || "—"),
       "Comprobaciones realizadas: " + (d.comprobaciones || "—"),
       "",
       "Descripción de la incidencia o de la pieza:",
       d.descripcion,
     ].join("\n");
+  }
+
+  /* ---------------- Fotos y confirmación del envío ---------------- */
+  var MAX_FOTOS = 6;
+  var MAX_BYTES = 10 * 1024 * 1024;
+  var fotos = [];
+  var idFoto = 0;
+  var enviando = false;
+  var bloqueados = [];
+  var entradaFotos = document.getElementById("f-fotos");
+  var botonFotos = document.getElementById("anadir-fotos");
+  var listaFotos = document.getElementById("lista-fotos");
+  var errorFotos = document.getElementById("e-fotos");
+
+  function extensionArchivo(nombre) {
+    var punto = nombre.lastIndexOf(".");
+    return punto >= 0 ? nombre.slice(punto + 1).toLowerCase() : "";
+  }
+
+  function formatoAdmitido(file) {
+    var tipo = (file.type || "").toLowerCase();
+    if (tipo === "image/jpeg" || tipo === "image/jpg" || tipo === "image/png" || tipo === "image/webp" || tipo === "image/heic" || tipo === "image/heif" || tipo === "image/heic-sequence" || tipo === "image/heif-sequence") return true;
+    var ext = extensionArchivo(file.name || "");
+    return ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "webp" || ext === "heic" || ext === "heif";
+  }
+
+  function bytesFotos() {
+    return fotos.reduce(function (suma, foto) { return suma + foto.file.size; }, 0);
+  }
+
+  function textoTamano(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1).replace(".", ",") + " MB";
+  }
+
+  function quitarFoto(id) {
+    fotos = fotos.filter(function (foto) {
+      if (foto.id !== id) return true;
+      if (foto.url) URL.revokeObjectURL(foto.url);
+      return false;
+    });
+    pintarFotos();
+  }
+
+  function pintarFotos() {
+    if (!listaFotos) return;
+    listaFotos.textContent = "";
+    fotos.forEach(function (foto) {
+      var item = document.createElement("li");
+      item.className = "foto";
+      var img = document.createElement("img");
+      img.alt = "";
+      img.hidden = true;
+      var aviso = document.createElement("p");
+      aviso.className = "foto__aviso";
+      aviso.hidden = true;
+      var datos = document.createElement("div");
+      var nombre = document.createElement("p");
+      nombre.className = "foto__nombre";
+      nombre.textContent = foto.file.name;
+      var tamano = document.createElement("p");
+      tamano.className = "foto__tamano";
+      tamano.textContent = textoTamano(foto.file.size);
+      datos.appendChild(nombre);
+      datos.appendChild(tamano);
+      var quitar = document.createElement("button");
+      quitar.type = "button";
+      quitar.className = "boton boton--secundario";
+      quitar.textContent = "Quitar";
+      quitar.setAttribute("aria-label", "Quitar " + foto.file.name);
+      quitar.addEventListener("click", function () { quitarFoto(foto.id); });
+      item.appendChild(img);
+      item.appendChild(aviso);
+      item.appendChild(datos);
+      item.appendChild(quitar);
+      listaFotos.appendChild(item);
+      var prueba = new Image();
+      prueba.onload = function () {
+        img.src = foto.url;
+        img.alt = "Vista previa de " + foto.file.name;
+        img.hidden = false;
+      };
+      prueba.onerror = function () {
+        aviso.hidden = false;
+        aviso.textContent = "Sin vista previa. La foto se enviará igualmente.";
+      };
+      prueba.src = foto.url;
+    });
+  }
+
+  function anadirFotos(lista) {
+    var avisos = [];
+    Array.prototype.forEach.call(lista, function (file) {
+      if (!formatoAdmitido(file)) {
+        avisos.push(file.name + ": usa JPEG, PNG, WebP o HEIC.");
+        return;
+      }
+      var repetida = fotos.some(function (foto) {
+        return foto.file.name === file.name && foto.file.size === file.size && foto.file.lastModified === file.lastModified;
+      });
+      if (repetida) {
+        avisos.push(file.name + " ya está añadida.");
+        return;
+      }
+      if (fotos.length >= MAX_FOTOS) {
+        avisos.push(file.name + " no se ha añadido: el máximo es 6 fotos.");
+        return;
+      }
+      if (bytesFotos() + file.size > MAX_BYTES) {
+        avisos.push(file.name + " no se ha añadido: las fotos no pueden sumar más de 10 MB.");
+        return;
+      }
+      fotos.push({ id: ++idFoto, file: file, url: URL.createObjectURL(file) });
+    });
+    pintarFotos();
+    if (errorFotos) errorFotos.textContent = avisos.join(" ");
+  }
+
+  function limpiarFotos() {
+    fotos.forEach(function (foto) { if (foto.url) URL.revokeObjectURL(foto.url); });
+    fotos = [];
+    if (entradaFotos) entradaFotos.value = "";
+    if (errorFotos) errorFotos.textContent = "";
+    pintarFotos();
+  }
+
+  if (botonFotos && entradaFotos) {
+    botonFotos.addEventListener("click", function () { entradaFotos.click(); });
+    entradaFotos.addEventListener("change", function () {
+      anadirFotos(entradaFotos.files || []);
+      entradaFotos.value = "";
+    });
+  }
+
+  function bloquearFormulario() {
+    bloqueados = [];
+    Array.prototype.forEach.call(form.querySelectorAll("input, select, textarea, button"), function (el) {
+      if (el.disabled) return;
+      el.disabled = true;
+      bloqueados.push(el);
+    });
+  }
+
+  function desbloquearFormulario() {
+    bloqueados.forEach(function (el) { el.disabled = false; });
+    bloqueados = [];
+  }
+
+  function interpretarRespuesta(texto) {
+    if (!texto || !String(texto).trim()) return "no-confirmado";
+    var datos;
+    try { datos = JSON.parse(texto); } catch (e) { return "no-confirmado"; }
+    if (!datos || typeof datos !== "object") return "no-confirmado";
+    if (datos.success === true || datos.success === "true") return "aceptada";
+    if (datos.success === false || datos.success === "false") return "rechazada";
+    return "no-confirmado";
+  }
+
+  function cerrarEnvio(resultado) {
+    if (!enviando) return;
+    if (resultado === "aceptada") {
+      form.reset();
+      campos.forEach(function (c) { c.removeAttribute("aria-invalid"); });
+      limpiarUbicacion();
+      limpiarFotos();
+    }
+    desbloquearFormulario();
+    enviando = false;
+    enviar.disabled = modo !== "destino";
+    enviar.textContent = modo === "destino" ? "Enviar solicitud" : enviar.textContent;
+    if (modo === "destino") enviar.disabled = false;
+    if (resultado === "aceptada") {
+      mostrarEstado("ok", "Solicitud aceptada",
+        "FormSubmit ha aceptado la solicitud. Esto no confirma que ya haya llegado al buzón de RDMP.", true);
+    } else if (resultado === "rechazada") {
+      mostrarEstado("error", "FormSubmit no ha aceptado la solicitud",
+        "Los datos, la ubicación y las fotos siguen en el formulario." + (correo ? " Puedes intentarlo de nuevo o escribir a " + correo + "." : " Puedes intentarlo de nuevo."), true);
+    } else {
+      mostrarEstado("error", "No hemos podido confirmar el envío",
+        "No sabemos si FormSubmit ha aceptado la solicitud. Los datos, la ubicación y las fotos siguen aquí. Comprueba si ha llegado antes de enviarla otra vez" + (correo ? " o escribe a " + correo + "." : "."), true);
+    }
+    estado.scrollIntoView({ block: "nearest" });
   }
 
   form.addEventListener("submit", function (e) {
@@ -710,11 +1088,15 @@
         "?subject=" + encodeURIComponent("Solicitud RDMP — " + d.motivo + " — " + d.tipo + " " + d.modelo) +
         "&body=" + encodeURIComponent(lineasCorreo(d));
       mostrarEstado("info", "Correo preparado",
-        "Si no se ha abierto tu programa de correo, escribe directamente a " + correo + ". La solicitud no se envía hasta que la mandes desde tu correo.");
+        "Si no se ha abierto tu programa de correo, escribe directamente a " + correo + ". La solicitud no se envía hasta que la mandes desde tu correo." +
+        (fotos.length ? " Las fotos no se adjuntan solas: añádelas en el correo." : ""),
+        true);
       return;
     }
 
-    enviar.disabled = true;
+    if (enviando) return;
+    enviando = true;
+    bloquearFormulario();
     enviar.textContent = "Enviando…";
     var envio = {
       "Motivo de la solicitud": d.motivo,
@@ -725,53 +1107,47 @@
       "Marca y modelo": d.modelo,
       "Número de serie o PIN": d.serie || "—",
       "Horas de máquina": d.horas || "—",
-      "Referencia de la sede u obra": referenciaLugar(d),
-      "Nombre del establecimiento": d.nombreLugar || "—",
+      "Sede u obra": d.sede || "—",
       "Dirección": d.direccion || "—",
       "Latitud": d.latitud || "—",
       "Longitud": d.longitud || "—",
-      "Google place ID": d.placeId || "—",
       "Indicaciones de acceso": d.indicaciones || "—",
-      "Enlace de Google Maps": d.enlaceMaps || "—",
+      "Enlace de OpenStreetMap": d.enlaceOsm || "—",
       "Códigos de fallo": d.codigos || "—",
       "Comprobaciones realizadas": d.comprobaciones || "—",
       "Descripción de la incidencia o de la pieza": d.descripcion,
       "Acepta el uso de sus datos": "Sí",
+      "Fotos": fotos.length ? String(fotos.length) : "Ninguna",
       _subject: "Solicitud RDMP — " + d.motivo + " — " + d.tipo + " " + d.modelo,
       _replyto: d.correo,
       _template: "table",
       _captcha: "false",
       _honey: form.elements._honey ? form.elements._honey.value : "",
     };
+    var cuerpo = new FormData();
+    Object.keys(envio).forEach(function (clave) { cuerpo.append(clave, envio[clave]); });
+    fotos.forEach(function (foto, indice) {
+      cuerpo.append("foto_" + (indice + 1), foto.file, foto.file.name);
+    });
+    var controlador = new AbortController();
+    var temporizador = setTimeout(function () { controlador.abort(); }, 45000);
     fetch(destino, {
       method: "POST",
-      body: JSON.stringify(envio),
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: cuerpo,
+      headers: { Accept: "application/json" },
+      signal: controlador.signal,
     })
       .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json().catch(function () { return {}; });
+        return r.text().then(function (texto) {
+          return { httpOk: r.ok, juicio: interpretarRespuesta(texto) };
+        });
       })
-      .then(function (respuesta) {
-        if (respuesta.success === false || respuesta.success === "false") throw new Error(respuesta.message || "rechazado");
-        form.reset();
-        campos.forEach(function (c) { c.removeAttribute("aria-invalid"); });
-        limpiarUbicacion();
-        mostrarEstado("ok", "Solicitud enviada", "Hemos recibido tu solicitud. Te responderemos a la dirección de correo indicada.");
+      .then(function (resultado) {
+        if (!resultado.httpOk || resultado.juicio === "rechazada") cerrarEnvio("rechazada");
+        else cerrarEnvio(resultado.juicio);
       })
-      .catch(function () {
-        mostrarEstado("error", "No se ha podido enviar la solicitud",
-          correo ? "Inténtalo de nuevo más tarde o escríbenos a " + correo + "." : "Inténtalo de nuevo más tarde.");
-      })
-      .finally(function () {
-        enviar.disabled = false;
-        enviar.textContent = "Enviar solicitud";
-        estado.scrollIntoView({ block: "nearest" });
-      });
+      .catch(function () { cerrarEnvio("no-confirmado"); })
+      .finally(function () { clearTimeout(temporizador); });
   });
 
-  if (!claveMaps) {
-    var buscar = document.getElementById("buscar-lugar");
-    if (buscar) buscar.disabled = true;
-  }
 })();

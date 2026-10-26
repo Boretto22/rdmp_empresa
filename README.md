@@ -1,6 +1,6 @@
 # RDMP — Reparación y Diagnóstico de Maquinaria Pesada
 
-Web estática de una sola página (HTML, CSS y JavaScript sin dependencias en el navegador). Todo lo que se publica está en la carpeta `public/`.
+Web estática de una sola página (HTML, CSS y JavaScript). Leaflet 1.9.4 va en el propio sitio, con su licencia BSD 2-Clause; el navegador no lo descarga de un CDN. Todo lo que se publica está en la carpeta `public/`.
 
 > **Estado:** borrador. Antes de publicarla hay que activar el envío del formulario, confirmar los derechos de las imágenes y redactar el aviso legal y la política de privacidad (ver «Pendiente antes de publicar»).
 
@@ -27,8 +27,8 @@ window.RDMP_CONFIG = {
   telefono: "",          // teléfono tal y como debe mostrarse
   zonaCobertura: "",     // zona de cobertura en texto libre
   destinoFormulario: "", // URL que recibe el formulario por POST
-  claveMapsGoogle: "",   // Google Maps JavaScript API; vacía hasta configurarla
-  mapaIdGoogle: "",      // opcional; vacío usa DEMO_MAP_ID
+  urlCartografia: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  atribucionCartografia: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };
 ```
 
@@ -36,25 +36,28 @@ window.RDMP_CONFIG = {
 - El formulario tiene tres comportamientos, según lo que haya configurado:
   1. **Sin `destinoFormulario` ni `correo`**: el botón está desactivado y se avisa de que el contacto está **pendiente de activación**. No se envía nada.
   2. **Solo `correo`**: el botón «Preparar correo» abre el programa de correo del usuario con la solicitud redactada. La web avisa de que el mensaje no se envía desde ella.
-  3. **Con `destinoFormulario`** (estado actual): se envían los datos en JSON por `POST` a esa URL. Solo se muestra «Solicitud enviada» si el servicio confirma la recepción.
+  3. **Con `destinoFormulario`** (estado actual): se envían los datos y las fotos en `multipart/form-data` por `POST` a esa URL. Solo se muestra «Solicitud aceptada» si FormSubmit responde `success` con el booleano `true` o el texto exacto `"true"`.
 
 ### Envío actual: FormSubmit
 
 El formulario usa [FormSubmit](https://formsubmit.co/) (`https://formsubmit.co/ajax/rdmpmaquinaria@gmail.com`), que reenvía cada solicitud a **rdmpmaquinaria@gmail.com** como una tabla con todos los campos. El asunto incluye el tipo de máquina y el modelo, y al pulsar «Responder» se contesta directamente al cliente.
 
-- **Activación:** FormSubmit no reenvía nada hasta que se pulsa el enlace «Activate Form» del correo que manda a rdmpmaquinaria@gmail.com (revisa también la carpeta de spam). Hasta entonces la web muestra «No se ha podido enviar la solicitud». **La activación va ligada a la dirección desde la que se envía el formulario**: debe hacerse con un envío desde <https://rdmpempresa.vercel.app/> (un envío desde `localhost` genera un enlace que no sirve para la web pública). Cada envío sin activar genera un correo nuevo e invalida los enlaces anteriores, así que hay que usar siempre el más reciente.
+- **Activación:** FormSubmit no reenvía nada hasta que se pulsa el enlace «Activate Form» del correo que manda a rdmpmaquinaria@gmail.com (revisa también la carpeta de spam). **La activación va ligada a la dirección desde la que se envía el formulario**: debe hacerse con un envío desde <https://rdmpempresa.vercel.app/> (un envío desde `localhost` genera un enlace que no sirve para la web pública). Cada envío sin activar genera un correo nuevo e invalida los enlaces anteriores, así que hay que usar siempre el más reciente.
+- **Confirmación:** la web solo muestra «Solicitud aceptada» si la respuesta trae `success` con el valor booleano `true` o el texto exacto `"true"`. Es el cuerpo que devuelve el endpoint AJAX de FormSubmit cuando acepta el envío (`{"success":"true","message":"The form was submitted successfully."}`). Un HTTP 200, un objeto vacío o un cuerpo ilegible no cuentan. En ese caso el mensaje dice que no se ha podido confirmar y conserva los datos; no afirma que la solicitud no haya llegado ni que ya esté en el buzón. Hay un límite de 45 segundos y un bloqueo mientras la petición está en curso.
+- **Fotos:** el envío con destino usa `multipart/form-data`, porque JSON no puede llevar archivos. FormSubmit admite varios campos de archivo siempre que la suma no pase de 10 MB. La web limita a 6 fotos, JPEG, PNG, WebP o HEIC. No hay backend propio: el límite lo aplica el navegador antes de enviar y FormSubmit al recibir. Las fotos HEIC se envían; la miniatura avisa si el navegador no puede mostrarlas.
 - **Protección antispam:** el formulario incluye un campo trampa oculto (`_honey`).
 - **Privacidad:** los datos pasan por FormSubmit, un servicio de terceros. La política de privacidad debe mencionarlo.
 - **Cambiar de servicio:** basta con poner otra URL en `destinoFormulario` (Formspree, un backend propio…). Si el servicio exige otro formato de datos, se ajusta en `public/js/main.js`.
 
 Campos que llegan al correo:
 
-- Motivo de la solicitud (diagnóstico y asistencia, reparación in situ, mantenimiento, impresión 3D metálica u otra consulta)
+- Motivo de la solicitud (diagnóstico y asistencia, reparación in situ, mantenimiento, impresión 3D u otra consulta)
 - Nombre o empresa, correo y teléfono (opcional)
 - Tipo de máquina, marca y modelo, número de serie o PIN (opcional) y horas de máquina (opcional)
-- Referencia de la sede u obra, nombre del establecimiento, dirección, latitud, longitud, Google place ID, indicaciones de acceso y enlace de Google Maps
+- Sede u obra, dirección e indicaciones de acceso (opcionales), latitud, longitud y enlace de OpenStreetMap al punto confirmado
 - Códigos de fallo y comprobaciones realizadas (opcionales)
 - Descripción de la incidencia o de la pieza
+- Fotos opcionales (JPEG, PNG, WebP o HEIC; hasta 6 y 10 MB en total)
 - Aceptación del uso de los datos
 
 El asunto incluye el motivo, el tipo de máquina y el modelo.
@@ -69,35 +72,35 @@ La sección visible resume aplicaciones, materiales y alcance. El límite a piez
 
 Decisión vigente del equipo de referencia: FX10 + Metal Kit, lavado y sinterización, escáner 3D, medición y acabado. El criterio de diseño sigue siendo una furgoneta grande; el peso no es el criterio principal. Hay que contemplar accesos, mantenimiento, alimentación, extracción, gases, consumibles, anclajes y condiciones de operación. La validación de esa instalación es independiente de esta web y no está hecha. No consta certificación de Markforged para usar estos equipos dentro de una furgoneta. Metal X, Wash-1 y Sinter-1 ya no son la referencia pública ni interna del equipo.
 
-## Selector de Google Maps
+## Mapa de ubicación
 
-El cliente elige la sede, la obra o el punto de la máquina en un mapa dentro de la web («Seleccionar sede u obra en el mapa»). No se abre Google Maps en otra pestaña para copiar coordenadas. Confirmar guarda la ubicación en la solicitud en curso; no se envía hasta pulsar «Enviar solicitud».
+El cliente marca el punto de la máquina en un mapa dentro de la web («Seleccionar ubicación en el mapa»). El mapa es Leaflet 1.9.4 con teselas de OpenStreetMap: calles, carreteras y poblaciones reales. No hace falta cuenta, tarjeta ni clave. Leaflet y su CSS se sirven desde `public/vendor/leaflet/` (licencia BSD 2-Clause, archivo `LICENSE`). El despliegue sigue siendo la carpeta estática `public/`, compatible con Vercel.
 
-El modal permite buscar con autocompletado, pulsar el mapa, arrastrar el marcador, escribir latitud y longitud, o usar la geolocalización. Esta última solo pide permiso al pulsar el botón y no confirma sola. Cancelar no cambia la ubicación ya confirmada. Una respuesta antigua de geocodificación no pisa una selección más reciente.
+La vista inicial encuadra la península ibérica y Baleares, con margen. Los botones «Península», «Baleares» y «Ver todo» cambian el encuadre y no mueven el punto. Baleares incluye Mallorca, Menorca, Ibiza y Formentera. Se puede hacer zoom, arrastrar con el ratón y usar gestos táctiles. Un clic deja un único marcador arrastrable. El centro inicial no cuenta como ubicación. Al abrir el modal y al cambiar el tamaño o la orientación se recalcula el tamaño del mapa.
 
-Latitud de -90 a 90 y longitud de -180 a 180. El cero es válido. Sin dirección postal bastan las coordenadas. El enlace de Google Maps se genera al enviar, para quien recibe el correo; no es el modo de selección.
+El buscador es local: municipios de España en la península y Baleares, con la provincia o la isla cuando el nombre se repite. Elegir un municipio solo centra el mapa; después hay que marcar el punto de la máquina. No hay búsqueda de empresas ni de direcciones postales, ni geocodificación automática. El nombre de la sede u obra, la dirección y las indicaciones de acceso son campos de texto del formulario.
 
-**Falta la clave para activar el mapa.** En `public/config.js`, `claveMapsGoogle` está vacía. Mientras lo esté, el selector se abre y avisa de que el mapa no carga; se pueden confirmar coordenadas escritas a mano. No hay clave de ejemplo en el repositorio.
+«Usar mi ubicación» pide permiso solo al pulsarlo y no confirma sola. Latitud y longitud se pueden escribir con coma o punto. El rango es -90 a 90 y -180 a 180; el cero es válido. Cada geolocalización queda ligada a la sesión del modal y a la versión de la selección: una respuesta antigua no pisa un punto posterior ni una sesión nueva. «Confirmar ubicación» guarda el punto en la solicitud en curso. Cancelar, cerrar o Escape conservan el punto ya confirmado. Al reabrir se muestra ese punto y se puede cambiar. El punto provisional y el confirmado van separados.
 
-### Qué hay que habilitar en Google Cloud
+Al enviar se incluyen latitud, longitud, sede u obra, dirección e indicaciones cuando existen, y un enlace de OpenStreetMap al punto confirmado. Si el envío falla o no se puede confirmar, se conservan los datos y las fotos.
 
-Cuenta de facturación y estas APIs:
+### Cartografía
 
-- Maps JavaScript API
-- Places API (New), para el buscador `PlaceAutocompleteElement`
-- Geocoding API, para la dirección inversa al pulsar o mover el marcador
+Proveedor por defecto, en `public/config.js`:
 
-Crea una clave de navegador y pégala en `claveMapsGoogle`. Restrínge la por APIs (solo las tres anteriores) y por sitios:
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png`
 
-- `https://rdmpempresa.vercel.app/*`
-- `http://localhost:4173/*`
-- `http://127.0.0.1:4173/*`
+La atribución visible es «© OpenStreetMap contributors», con enlace a la licencia. Se cumple la [política de teselas de la OSMF](https://operations.osmfoundation.org/policies/tiles/): sin cabeceras que impidan la caché del navegador, sin descarga previa de regiones y sin modo offline. El uso básico de una web con tráfico moderado entra en el servidor público; no hay disponibilidad garantizada ni uso sin conexión. Si el tráfico crece, `urlCartografia` y `atribucionCartografia` permiten cambiar a otro proveedor derivado de OpenStreetMap. Con la URL estándar, la atribución de OpenStreetMap se mantiene aunque el texto de configuración esté vacío.
 
-La clave queda visible en el navegador; esas restricciones son las que limitan su uso.
+El mapa se crea al abrir el selector. Si las teselas o Leaflet fallan, se explica y siguen disponibles la latitud y la longitud.
 
-`mapaIdGoogle` es opcional. Vacío, el marcador usa `DEMO_MAP_ID`, válido para desarrollo. Para producción, crea un Map ID en Google Cloud y ponlo en `mapaIdGoogle`.
+### Municipios
 
-La política de privacidad debe mencionar Google Maps y la geolocalización cuando la clave esté activa.
+`public/datos/municipios.json` contiene 8128 centroides reales. Proceden de los límites municipales de la Base de Datos de Límites Jurisdiccionales de España (BDLJE) del Instituto Geográfico Nacional ([ign.es](https://www.ign.es/), [Centro de Descargas del CNIG](http://centrodedescargas.cnig.es/CentroDescargas/)), licencia [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Opendatasoft calculó los centroides en el conjunto [georef-spain-municipio](https://public.opendatasoft.com/explore/dataset/georef-spain-municipio/) (datos procesados el 2022-12-26) y los republica con la misma licencia.
+
+Se han excluido Canarias, Ceuta, Melilla y los territorios no asociados a una provincia. En Illes Balears el texto que distingue el municipio es la isla (Mallorca, Menorca, Ibiza o Formentera), deducida de las coordenadas de ese mismo centroide; no es un campo distinto de la fuente. El índice no incluye municipios de Portugal: Portugal se ve en el mapa y el punto se marca con un clic o con coordenadas. Hay que mantener la atribución al IGN y a Opendatasoft al redistribuir el archivo.
+
+La política de privacidad debe mencionar FormSubmit, OpenStreetMap y la geolocalización.
 
 ## Imágenes
 
@@ -145,9 +148,9 @@ Barlow y Barlow Condensed, servidas desde `public/assets/fonts/` (sin peticiones
 - [x] Correo, teléfono y zona de cobertura en `public/config.js`.
 - [ ] Activar FormSubmit con el enlace recibido en rdmpmaquinaria@gmail.com y hacer una prueba real desde el dominio público.
 - [ ] Derechos de publicación de las cinco fotografías usadas (los logotipos propios no sustituyen esa revisión).
-- [ ] Aviso legal (identificación del titular, obligatoria en España según la LSSI) y política de privacidad (RGPD), enlazados en el pie y junto a la casilla del formulario. La política debe mencionar FormSubmit y, si se activa, Google Maps y la geolocalización.
+- [ ] Aviso legal (identificación del titular, obligatoria en España según la LSSI) y política de privacidad (RGPD), enlazados en el pie y junto a la casilla del formulario. La política debe mencionar FormSubmit, OpenStreetMap y la geolocalización.
 - [x] Dominio: la web está publicada en Vercel en <https://rdmpempresa.vercel.app/>. Si se cambia de dominio, actualizar `canonical`, `og:url` y `og:image` en `public/index.html` y volver a activar FormSubmit desde el nuevo dominio.
-- [ ] Clave de Google Maps (`claveMapsGoogle`) con Maps JavaScript API, Places API (New) y Geocoding API. Sin ella el mapa del formulario no carga.
+- [x] Mapa del formulario con Leaflet y OpenStreetMap, sin clave de API.
 - [ ] Validación independiente de la instalación del FX10 + Metal Kit, con lavado, sinterización, escáner y acabado, en la furgoneta.
 
 ## Publicación en Vercel
@@ -161,7 +164,9 @@ public/                  Web publicable
   index.html             Página única con todas las secciones
   config.js              Datos de contacto y destino del formulario
   css/styles.css         Estilos
-  js/main.js             Menú móvil, datos de contacto y formulario
+  js/main.js             Menú móvil, datos de contacto, mapa y formulario
+  datos/municipios.json  Municipios de la península y Baleares, CC BY 4.0
+  vendor/leaflet/        Leaflet 1.9.4, CSS, iconos y licencia BSD 2-Clause
   assets/img/            Imágenes optimizadas
   assets/fonts/          Tipografías
 imagenes-originales/     Imágenes adjuntas, sin modificar
