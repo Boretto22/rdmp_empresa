@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RDMP — Reparación y Diagnóstico de Maquinaria Pesada</title>
   <meta name="description" content="Asistencia técnica móvil multimarca para maquinaria pesada de construcción, obra pública, canteras y minería: diagnóstico de averías, electrónica, sistemas eléctricos, software, reparaciones in situ, impresión 3D de piezas auxiliares y mantenimiento preventivo.">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#0f0f0f">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="canonical" href="https://rdmpempresa.vercel.app/">
 
@@ -23,18 +23,23 @@
   <meta name="twitter:image" content="https://rdmpempresa.vercel.app/assets/img/compartir-rdmp-1200x630.jpg">
   <meta name="twitter:card" content="summary_large_image">
 
-  <link rel="preload" href="assets/fonts/barlow-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/styles.css">
   <script>document.documentElement.classList.add("js");</script>
   <script src="config.js" defer></script>
-  <script src="js/main.js" defer></script>
+  <script src="js/main.js" defer onerror="document.documentElement.classList.remove('js')"></script>
 </head>
 <body>
   <a class="saltar" href="#contenido">Saltar al contenido</a>
 
   <header class="cabecera" id="cabecera">
-    <div class="contenedor cabecera__fila">
+    <div class="cabecera__barra">
+      <button class="menu-boton" type="button" aria-expanded="false" aria-controls="navegacion">
+        <span class="menu-boton__icono" aria-hidden="true"></span>
+        <span class="menu-boton__texto">Menú</span>
+      </button>
+
       <a class="marca" href="#inicio" aria-label="RDMP, ir al inicio">
         <picture>
           <source type="image/webp" srcset="assets/img/logo-rdmp-200.webp 1x, assets/img/logo-rdmp-400.webp 2x">
@@ -43,18 +48,12 @@
         <span class="marca__lema">Reparación y Diagnóstico<br>de Maquinaria Pesada</span>
       </a>
 
-      <button class="menu-boton" type="button" aria-expanded="false" aria-controls="navegacion">
-        <span class="menu-boton__icono" aria-hidden="true"></span>
-        <span class="menu-boton__texto">Menú</span>
-      </button>
-
       <nav class="navegacion" id="navegacion" aria-label="Principal">
         <ul class="navegacion__lista">
           <li><a href="#servicios">Servicios</a></li>
-          <li><a href="#impresion-3d">Impresión 3D</a></li>
           <li><a href="#mantenimiento">Mantenimiento</a></li>
+          <li><a href="#impresion-3d">Fabricación 3D</a></li>
           <li><a href="#como-trabajamos">Cómo trabajamos</a></li>
-          <li><a href="#pendiente-de-estudio">En estudio</a></li>
           <li><a href="#contacto">Contacto</a></li>
         </ul>
         <a class="boton boton--primario navegacion__cta" href="#contacto">Solicitar asistencia</a>
@@ -64,22 +63,23 @@
 
   <main id="contenido" tabindex="-1">
 
-    <!-- INICIO -->
-    <section class="portada" id="inicio" aria-labelledby="titulo-portada">
-      <div class="contenedor portada__rejilla">
+    <!-- PORTADA -->
+    <section class="portada tema-oscuro" id="inicio" aria-labelledby="titulo-portada">
+      <div class="portada__media">
+        <picture>
+          <source type="image/webp" srcset="assets/img/portada-bulldozer-480.webp 480w, assets/img/portada-bulldozer-735.webp 735w" sizes="(min-width: 960px) 58vw, 100vw">
+          <img src="assets/img/portada-bulldozer-735.jpg" srcset="assets/img/portada-bulldozer-480.jpg 480w, assets/img/portada-bulldozer-735.jpg 735w" sizes="(min-width: 960px) 58vw, 100vw" width="735" height="571" alt="Bulldozer de cadenas con hoja frontal y ripper trasero sobre un terreno removido, al atardecer." fetchpriority="high" decoding="async">
+        </picture>
+      </div>
+
+      <div class="contenedor portada__contenido">
         <div class="portada__texto">
-          <div class="emblema">
-            <picture>
-              <source type="image/webp" srcset="assets/img/emblema-rdmp-360.webp 360w, assets/img/emblema-rdmp-720.webp 720w" sizes="(min-width: 600px) 300px, 220px">
-              <img src="assets/img/emblema-rdmp-360.png" srcset="assets/img/emblema-rdmp-360.png 360w, assets/img/emblema-rdmp-720.png 720w" sizes="(min-width: 600px) 300px, 220px" width="360" height="240" alt="Emblema de RDMP: un bulldozer delante de unas montañas y una rueda dentada, sobre el nombre RDMP." decoding="async">
-            </picture>
-          </div>
           <p class="antetitulo">Servicio técnico móvil multimarca</p>
-          <h1 id="titulo-portada">Diagnóstico y reparación de maquinaria pesada, <span class="resalte">donde trabaja la máquina</span></h1>
-          <p class="entradilla">Localizamos y resolvemos averías electrónicas, eléctricas y de software en maquinaria de construcción, obra pública, canteras y minería. Nos acercamos hasta el problema, allí donde se produzca la avería, para reducir traslados y tiempo de parada.</p>
+          <h1 id="titulo-portada">Diagnóstico y reparación, donde trabaja tu máquina.</h1>
+          <p class="portada__entradilla">Asistencia técnica móvil multimarca para maquinaria de construcción, obra pública, canteras y minería.</p>
           <div class="acciones">
-            <a class="boton boton--primario boton--grande" href="#contacto">Solicitar asistencia</a>
-            <a class="boton boton--secundario boton--grande" href="#servicios">Ver servicios</a>
+            <a class="boton boton--primario" href="#contacto">Solicitar asistencia</a>
+            <a class="boton boton--secundario" href="#servicios">Conocer los servicios</a>
           </div>
           <ul class="sectores" aria-label="Sectores">
             <li>Construcción</li>
@@ -88,16 +88,9 @@
             <li>Minería</li>
           </ul>
         </div>
-
-        <figure class="portada__imagen">
-          <picture>
-            <source type="image/webp" srcset="assets/img/portada-bulldozer-480.webp 480w, assets/img/portada-bulldozer-735.webp 735w" sizes="(min-width: 960px) 46vw, 100vw">
-            <img src="assets/img/portada-bulldozer-735.jpg" srcset="assets/img/portada-bulldozer-480.jpg 480w, assets/img/portada-bulldozer-735.jpg 735w" sizes="(min-width: 960px) 46vw, 100vw" width="735" height="571" alt="Bulldozer de cadenas con hoja frontal y ripper trasero sobre un terreno removido, al atardecer." fetchpriority="high" decoding="async">
-          </picture>
-        </figure>
       </div>
 
-      <div class="contenedor">
+      <div class="contenedor portada__pie">
         <ul class="franja" aria-label="Áreas de trabajo">
           <li><span class="franja__num" aria-hidden="true">01</span> Diagnóstico de averías</li>
           <li><span class="franja__num" aria-hidden="true">02</span> Electrónica y sistemas eléctricos</li>
@@ -108,135 +101,136 @@
       </div>
     </section>
 
-    <!-- SERVICIOS -->
-    <section class="seccion seccion--clara" id="servicios" aria-labelledby="titulo-servicios">
-      <div class="contenedor">
-        <header class="seccion__cabecera">
-          <p class="etiqueta"><span aria-hidden="true">01 /</span> Servicios</p>
-          <h2 id="titulo-servicios">Del síntoma al origen de la avería</h2>
-          <p class="seccion__intro">Diagnóstico multimarca, electrónica, sistemas eléctricos y software, e intervenciones rápidas en el lugar de trabajo.</p>
-        </header>
-
-        <div class="servicios">
-          <ul class="tarjetas">
-            <li class="tarjeta">
-              <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><circle cx="13" cy="13" r="9"/><path d="M20 20l8 8M7 13h3l2-4 3 8 2-4h2"/></svg>
-              <h3>Diagnóstico de averías</h3>
-              <p>Partimos de los síntomas y los códigos de fallo registrados, y comprobamos los sistemas implicados para localizar el origen de la avería antes de sustituir componentes.</p>
-            </li>
-            <li class="tarjeta">
-              <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><rect x="9" y="9" width="14" height="14"/><rect x="13" y="13" width="6" height="6"/><path d="M13 4v5M19 4v5M13 23v5M19 23v5M4 13h5M4 19h5M23 13h5M23 19h5"/></svg>
-              <h3>Electrónica</h3>
-              <p>Unidades de control, sensores, actuadores y su cableado. Medición de señales y comprobación de la comunicación entre componentes.</p>
-            </li>
-            <li class="tarjeta">
-              <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 3L7 18h8l-2 11 11-15h-8z"/></svg>
-              <h3>Sistemas eléctricos</h3>
-              <p>Arranque, carga, alimentación, iluminación, mazos de cables, conectores y protecciones. Búsqueda de cortocircuitos, derivaciones y falsos contactos.</p>
-            </li>
-            <li class="tarjeta">
-              <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="20"/><path d="M3 11h26M9 16l3 3-3 3M15 22h7"/></svg>
-              <h3>Software</h3>
-              <p>Consulta de parámetros y registros de la máquina, y configuración o actualización del software cuando se dispone de las herramientas y la documentación adecuadas para ese equipo.</p>
-            </li>
-            <li class="tarjeta">
-              <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><path d="M20.5 4.5a6 6 0 0 0-7.6 7.6L4 21v4l3 3h4l8.9-8.9a6 6 0 0 0 7.6-7.6L24 15l-4-1-1-4z"/></svg>
-              <h3>Reparaciones in situ</h3>
-              <p>Priorizamos la reparación en el lugar de trabajo siempre que sea técnicamente posible, para evitar grandes gastos de transporte y reducir el tiempo de inmovilización. Cuando la intervención requiere desmontajes importantes o instalaciones específicas, coordinamos la reparación con un taller especializado.</p>
-            </li>
-            <li class="tarjeta">
-              <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l11 6v14l-11 6-11-6V9z"/><path d="M5 9l11 6 11-6M16 15v14M10 18.5l6 3.3 6-3.3M10 22.5l6 3.3 6-3.3"/></svg>
-              <h3>Impresión 3D</h3>
-              <p>Fabricación a medida de piezas auxiliares no críticas mediante impresión 3D, con evaluación técnica de cada aplicación.</p>
-            </li>
-          </ul>
-
-          <figure class="servicios__imagen">
-            <picture>
-              <source type="image/webp" srcset="assets/img/servicios-bulldozer-ripper-400.webp 400w, assets/img/servicios-bulldozer-ripper-564.webp 564w" sizes="(min-width: 960px) 30vw, 100vw">
-              <img src="assets/img/servicios-bulldozer-ripper-564.jpg" srcset="assets/img/servicios-bulldozer-ripper-400.jpg 400w, assets/img/servicios-bulldozer-ripper-564.jpg 564w" sizes="(min-width: 960px) 30vw, 100vw" width="564" height="844" alt="Bulldozer de cadenas trabajando con el ripper trasero sobre roca suelta en una explotación." loading="lazy" decoding="async">
-            </picture>
-          </figure>
+    <!-- ASISTENCIA MÓVIL -->
+    <section class="seccion tema-claro" aria-labelledby="titulo-asistencia">
+      <div class="contenedor duo">
+        <figure class="duo__imagen duo__imagen--vertical">
+          <picture>
+            <source type="image/webp" srcset="assets/img/servicios-bulldozer-ripper-400.webp 400w, assets/img/servicios-bulldozer-ripper-564.webp 564w" sizes="(min-width: 960px) 44vw, 100vw">
+            <img src="assets/img/servicios-bulldozer-ripper-564.jpg" srcset="assets/img/servicios-bulldozer-ripper-400.jpg 400w, assets/img/servicios-bulldozer-ripper-564.jpg 564w" sizes="(min-width: 960px) 44vw, 100vw" width="564" height="844" alt="Bulldozer de cadenas trabajando con el ripper trasero sobre roca suelta en una explotación." loading="lazy" decoding="async">
+          </picture>
+        </figure>
+        <div class="duo__texto">
+          <h2 id="titulo-asistencia">Asistencia móvil multimarca</h2>
+          <p class="entradilla">Localizamos y resolvemos averías electrónicas, eléctricas y de software en maquinaria de construcción, obra pública, canteras y minería. Nos acercamos hasta el problema, allí donde se produzca la avería, para reducir traslados y tiempo de parada.</p>
+          <p>Nos desplazamos hasta la máquina. Con la marca, el modelo y los síntomas confirmamos antes de salir qué herramientas de diagnóstico y documentación requiere la intervención. Lo que se valora en cada caso es el alcance de la reparación: algunas requieren instalaciones específicas y se coordinan con un taller especializado.</p>
+          <a class="boton boton--oscuro" href="#como-trabajamos">Cómo trabajamos</a>
         </div>
-
-        <p class="aviso-nota"><strong>Asistencia móvil multimarca.</strong> Nos desplazamos hasta la máquina. Con la marca, el modelo y los síntomas confirmamos antes de salir qué herramientas de diagnóstico y documentación requiere la intervención. Lo que se valora en cada caso es el alcance de la reparación: algunas requieren instalaciones específicas y se coordinan con un taller especializado.</p>
       </div>
     </section>
 
-    <!-- IMPRESIÓN 3D -->
-    <section class="seccion seccion--oscura" id="impresion-3d" aria-labelledby="titulo-fabricacion">
+    <!-- SERVICIOS -->
+    <section class="seccion seccion--sin-tope tema-claro" id="servicios" aria-labelledby="titulo-servicios">
       <div class="contenedor">
-        <header class="seccion__cabecera">
-          <p class="etiqueta"><span aria-hidden="true">02 /</span> Impresión 3D</p>
-          <h2 id="titulo-fabricacion">Impresión 3D de piezas auxiliares</h2>
-          <p class="seccion__intro">Fabricamos piezas auxiliares a medida para apoyar la reparación y el mantenimiento de maquinaria pesada y reducir determinadas esperas de recambios o mecanizados externos.</p>
+        <header class="cabecera-seccion">
+          <p class="etiqueta">Servicios</p>
+          <h2 id="titulo-servicios">Del síntoma al origen de la avería</h2>
+          <p class="entradilla">Diagnóstico multimarca, electrónica, sistemas eléctricos y software, e intervenciones rápidas en el lugar de trabajo.</p>
         </header>
 
-        <div class="bloques">
-          <article class="bloque">
-            <h3>Aplicaciones</h3>
-            <p>Rejillas auxiliares, separadores, topes, soportes, adaptadores y útiles de montaje. Evaluamos cada pieza según su función y condiciones de uso.</p>
-          </article>
-          <article class="bloque">
-            <h3>Materiales y fabricación</h3>
-            <p>Fabricación en metal o composite según la aplicación, con medición o escaneado 3D, diseño y posprocesado cuando corresponda.</p>
-          </article>
-          <article class="bloque">
-            <h3>Alcance</h3>
-            <p>Piezas no críticas, sujetas a validación técnica. Se excluyen componentes estructurales, de elevación, frenado, dirección o seguridad.</p>
-          </article>
-        </div>
-
-        <div class="seccion__cierre">
-          <p>Material y plazo definidos según la geometría, las condiciones de uso y el posprocesado.</p>
-          <details class="detalles">
-            <summary>Detalles de fabricación</summary>
-            <p>La configuración de referencia es Markforged FX10 con Metal Kit. En metal, la pieza pasa por lavado y sinterización; no sale acabada al terminar la impresión.</p>
-            <p>El acero inoxidable 17-4 PH es el metal de referencia y se elige según la aplicación. No cubre cualquier pieza. Cuando corresponde, la fabricación se hace en composite.</p>
-            <p>El trabajo incluye medición o escaneado 3D, diseño y acabado cuando la geometría o las tolerancias lo requieren. Mencionar Markforged no implica colaboración oficial ni una instalación móvil certificada.</p>
-          </details>
-          <a class="boton boton--primario" href="#contacto" data-motivo="Impresión 3D">Consultar fabricación de una pieza</a>
-        </div>
+        <ul class="tarjetas">
+          <li class="tarjeta">
+            <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><circle cx="13" cy="13" r="9"/><path d="M20 20l8 8M7 13h3l2-4 3 8 2-4h2"/></svg>
+            <h3>Diagnóstico de averías</h3>
+            <p>Partimos de los síntomas y los códigos de fallo registrados, y comprobamos los sistemas implicados para localizar el origen de la avería antes de sustituir componentes.</p>
+          </li>
+          <li class="tarjeta">
+            <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><rect x="9" y="9" width="14" height="14"/><rect x="13" y="13" width="6" height="6"/><path d="M13 4v5M19 4v5M13 23v5M19 23v5M4 13h5M4 19h5M23 13h5M23 19h5"/></svg>
+            <h3>Electrónica</h3>
+            <p>Unidades de control, sensores, actuadores y su cableado. Medición de señales y comprobación de la comunicación entre componentes.</p>
+          </li>
+          <li class="tarjeta">
+            <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 3L7 18h8l-2 11 11-15h-8z"/></svg>
+            <h3>Sistemas eléctricos</h3>
+            <p>Arranque, carga, alimentación, iluminación, mazos de cables, conectores y protecciones. Búsqueda de cortocircuitos, derivaciones y falsos contactos.</p>
+          </li>
+          <li class="tarjeta">
+            <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="20"/><path d="M3 11h26M9 16l3 3-3 3M15 22h7"/></svg>
+            <h3>Software</h3>
+            <p>Consulta de parámetros y registros de la máquina, y configuración o actualización del software cuando se dispone de las herramientas y la documentación adecuadas para ese equipo.</p>
+          </li>
+          <li class="tarjeta">
+            <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><g transform="rotate(45 16 16)"><path d="M14 15Q9.5 13 9.5 8.5V4a2 2 0 0 1 2-2h1.5a1 1 0 0 1 1 1v4.5h4.5V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3.5q0 4.5-4.5 6.5v13a2 2 0 0 1-4 0z"/><path d="M13 10h6v2.2h-6zM16 18.5v7"/></g></svg>
+            <h3>Reparaciones in situ</h3>
+            <p>Priorizamos la reparación en el lugar de trabajo siempre que sea técnicamente posible, para evitar grandes gastos de transporte y reducir el tiempo de inmovilización. Cuando la intervención requiere desmontajes importantes o instalaciones específicas, coordinamos la reparación con un taller especializado.</p>
+          </li>
+          <li class="tarjeta">
+            <svg class="tarjeta__icono" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l11 6v14l-11 6-11-6V9z"/><path d="M5 9l11 6 11-6M16 15v14M10 18.5l6 3.3 6-3.3M10 22.5l6 3.3 6-3.3"/></svg>
+            <h3>Impresión 3D</h3>
+            <p>Fabricación a medida de piezas auxiliares no críticas mediante impresión 3D, con evaluación técnica de cada aplicación.</p>
+          </li>
+        </ul>
       </div>
     </section>
 
     <!-- MANTENIMIENTO PREVENTIVO -->
-    <section class="seccion seccion--oscura" id="mantenimiento" aria-labelledby="titulo-mantenimiento">
-      <div class="contenedor dos-columnas">
-        <figure class="dos-columnas__imagen">
-          <img src="assets/img/mantenimiento-flota-736.jpg" srcset="assets/img/mantenimiento-flota-480.jpg 480w, assets/img/mantenimiento-flota-736.jpg 736w" sizes="(min-width: 960px) 44vw, 100vw" width="736" height="723" alt="Flota de bulldozers de cadenas aparcados en hilera en una explanada de tierra." loading="lazy" decoding="async">
-        </figure>
+    <section class="seccion tema-oscuro" id="mantenimiento" aria-labelledby="titulo-mantenimiento">
+      <div class="contenedor duo duo--invertido">
+        <div class="duo__texto">
+          <p class="etiqueta">Mantenimiento preventivo</p>
+          <h2 id="titulo-mantenimiento">Detectar el problema antes de la avería</h2>
+          <p class="entradilla">Mantenimiento preventivo multimarca para detectar a tiempo indicios de desgaste o de mal funcionamiento y planificar la intervención antes de una avería importante.</p>
 
-        <div>
-          <header class="seccion__cabecera">
-            <p class="etiqueta"><span aria-hidden="true">03 /</span> Mantenimiento preventivo</p>
-            <h2 id="titulo-mantenimiento">Detectar el problema antes de la avería</h2>
-            <p class="seccion__intro">Mantenimiento preventivo multimarca para detectar a tiempo indicios de desgaste o de mal funcionamiento y planificar la intervención antes de una avería importante.</p>
-          </header>
-
-          <div class="bloques">
-            <article class="bloque">
+          <div class="filas">
+            <article class="fila">
               <h3>Análisis de aceite</h3>
               <p>Toma de muestras del aceite de motor, del sistema hidráulico o de las transmisiones para su análisis. Los resultados ayudan a identificar desgaste interno, contaminación o degradación del lubricante.</p>
             </article>
-            <article class="bloque">
+            <article class="fila">
               <h3>Monitorización</h3>
               <p>Seguimiento periódico del estado de la máquina: códigos de fallo registrados, parámetros de funcionamiento y evolución de los resultados de cada análisis.</p>
             </article>
-            <article class="bloque">
+            <article class="fila">
               <h3>Un plan para flotas mixtas</h3>
               <p>Un mismo criterio de seguimiento para máquinas de distintos fabricantes, adaptado a las horas de trabajo y a las condiciones de cada obra o explotación, y coordinado con tu equipo de mantenimiento.</p>
             </article>
           </div>
         </div>
+        <figure class="duo__imagen">
+          <img src="assets/img/mantenimiento-flota-736.jpg" srcset="assets/img/mantenimiento-flota-480.jpg 480w, assets/img/mantenimiento-flota-736.jpg 736w" sizes="(min-width: 960px) 44vw, 100vw" width="736" height="723" alt="Flota de bulldozers de cadenas aparcados en hilera en una explanada de tierra." loading="lazy" decoding="async">
+        </figure>
+      </div>
+    </section>
+
+    <!-- IMPRESIÓN 3D -->
+    <section class="seccion tema-claro" id="impresion-3d" aria-labelledby="titulo-fabricacion">
+      <div class="contenedor fabricacion">
+        <div class="fabricacion__intro">
+          <p class="etiqueta">Impresión 3D</p>
+          <h2 id="titulo-fabricacion">Impresión 3D de piezas auxiliares</h2>
+          <p class="entradilla">Fabricamos piezas auxiliares a medida para apoyar la reparación y el mantenimiento de maquinaria pesada y reducir determinadas esperas de recambios o mecanizados externos.</p>
+          <p class="nota">Material y plazo definidos según la geometría, las condiciones de uso y el posprocesado.</p>
+          <a class="boton boton--oscuro" href="#contacto" data-motivo="Impresión 3D">Consultar fabricación de una pieza</a>
+        </div>
+
+        <div class="filas">
+          <article class="fila">
+            <h3>Aplicaciones</h3>
+            <p>Rejillas auxiliares, separadores, topes, soportes, adaptadores y útiles de montaje. Evaluamos cada pieza según su función y condiciones de uso.</p>
+          </article>
+          <article class="fila">
+            <h3>Materiales y fabricación</h3>
+            <p>Fabricación en metal o composite según la aplicación, con medición o escaneado 3D, diseño y posprocesado cuando corresponda.</p>
+          </article>
+          <article class="fila">
+            <h3>Alcance</h3>
+            <p>Piezas no críticas, sujetas a validación técnica. Se excluyen componentes estructurales, de elevación, frenado, dirección o seguridad.</p>
+          </article>
+          <details class="fila detalles">
+            <summary>Detalles de fabricación</summary>
+            <p>La configuración de referencia es Markforged FX10 con Metal Kit. En metal, la pieza pasa por lavado y sinterización; no sale acabada al terminar la impresión.</p>
+            <p>El acero inoxidable 17-4 PH es el metal de referencia y se elige según la aplicación. No cubre cualquier pieza. Cuando corresponde, la fabricación se hace en composite.</p>
+            <p>El trabajo incluye medición o escaneado 3D, diseño y acabado cuando la geometría o las tolerancias lo requieren. Mencionar Markforged no implica colaboración oficial ni una instalación móvil certificada.</p>
+          </details>
+        </div>
       </div>
     </section>
 
     <!-- CÓMO TRABAJAMOS -->
-    <section class="seccion seccion--clara" id="como-trabajamos" aria-labelledby="titulo-proceso">
+    <section class="seccion tema-oscuro" id="como-trabajamos" aria-labelledby="titulo-proceso">
       <div class="contenedor">
-        <header class="seccion__cabecera">
-          <p class="etiqueta"><span aria-hidden="true">04 /</span> Cómo trabajamos</p>
+        <header class="cabecera-seccion">
+          <p class="etiqueta">Cómo trabajamos</p>
           <h2 id="titulo-proceso">Cuatro pasos, de la consulta a la solución</h2>
         </header>
 
@@ -261,17 +255,17 @@
           </ol>
 
           <figure class="proceso__imagen">
-            <img src="assets/img/proceso-tecnicos-mina-736.jpg" srcset="assets/img/proceso-tecnicos-mina-480.jpg 480w, assets/img/proceso-tecnicos-mina-736.jpg 736w" sizes="(min-width: 960px) 38vw, 100vw" width="736" height="736" alt="Tres técnicos con casco y ropa de alta visibilidad junto a una gran excavadora minera en una corta." loading="lazy" decoding="async">
+            <img src="assets/img/proceso-tecnicos-mina-736.jpg" srcset="assets/img/proceso-tecnicos-mina-480.jpg 480w, assets/img/proceso-tecnicos-mina-736.jpg 736w" sizes="(min-width: 960px) 40vw, 100vw" width="736" height="736" alt="Tres técnicos con casco y ropa de alta visibilidad junto a una gran excavadora minera en una corta." loading="lazy" decoding="async">
           </figure>
         </div>
       </div>
     </section>
 
     <!-- PENDIENTE DE ESTUDIO -->
-    <section class="seccion seccion--estudio" id="pendiente-de-estudio" aria-labelledby="titulo-estudio">
+    <section class="seccion seccion--compacta tema-hueso" id="pendiente-de-estudio" aria-labelledby="titulo-estudio">
       <div class="contenedor estudio">
         <div class="estudio__texto">
-          <p class="etiqueta"><span aria-hidden="true">05 /</span> Pendiente de estudio</p>
+          <p class="etiqueta">Pendiente de estudio</p>
           <p class="sello"><span>Servicio no disponible</span> Todavía no se ofrece</p>
           <h2 id="titulo-estudio">Reprogramación para optimizar el consumo de combustible</h2>
           <p>Estamos evaluando la posibilidad de ofrecer en el futuro un servicio de reprogramación de maquinaria pesada orientado a optimizar el consumo de combustible. <strong>Este servicio todavía no se ofrece</strong> y, por ahora, no aceptamos encargos de este tipo.</p>
@@ -284,20 +278,24 @@
           <p class="estudio__compromiso">No publicaremos cifras de ahorro ni resultados mientras no dispongamos de mediciones verificadas.</p>
         </div>
         <figure class="estudio__imagen">
-          <img src="assets/img/estudio-bulldozers-ladera-736.jpg" srcset="assets/img/estudio-bulldozers-ladera-480.jpg 480w, assets/img/estudio-bulldozers-ladera-736.jpg 736w" sizes="(min-width: 960px) 34vw, 100vw" width="736" height="920" alt="Tres bulldozers empujando material ladera abajo en una cantera." loading="lazy" decoding="async">
+          <img src="assets/img/estudio-bulldozers-ladera-736.jpg" srcset="assets/img/estudio-bulldozers-ladera-480.jpg 480w, assets/img/estudio-bulldozers-ladera-736.jpg 736w" sizes="(min-width: 960px) 30vw, 100vw" width="736" height="920" alt="Tres bulldozers empujando material ladera abajo en una cantera." loading="lazy" decoding="async">
         </figure>
       </div>
     </section>
 
     <!-- CONTACTO -->
-    <section class="seccion seccion--oscura" id="contacto" aria-labelledby="titulo-contacto">
-      <div class="contenedor contacto">
-        <div class="contacto__info">
-          <header class="seccion__cabecera">
-            <p class="etiqueta"><span aria-hidden="true">06 /</span> Contacto</p>
+    <section class="seccion tema-acento" id="contacto" aria-labelledby="titulo-contacto">
+      <div class="contenedor">
+        <div class="llamada">
+          <div class="llamada__principal">
+            <picture>
+              <source type="image/webp" srcset="assets/img/emblema-rdmp-360.webp 360w, assets/img/emblema-rdmp-720.webp 720w" sizes="160px">
+              <img class="llamada__emblema" src="assets/img/emblema-rdmp-360.png" srcset="assets/img/emblema-rdmp-360.png 360w, assets/img/emblema-rdmp-720.png 720w" sizes="160px" width="360" height="240" alt="Emblema de RDMP: un bulldozer delante de unas montañas y una rueda dentada, sobre el nombre RDMP." loading="lazy" decoding="async">
+            </picture>
+            <p class="etiqueta">Contacto</p>
             <h2 id="titulo-contacto">Solicitar asistencia</h2>
-            <p class="seccion__intro">Indica marca, modelo, ubicación y síntomas de la avería. Añade los códigos de fallo y las comprobaciones realizadas para preparar la intervención.</p>
-          </header>
+            <p>Indica marca, modelo, ubicación y síntomas de la avería. Añade los códigos de fallo y las comprobaciones realizadas para preparar la intervención.</p>
+          </div>
 
           <dl class="datos">
             <div class="datos__fila">
@@ -391,19 +389,21 @@
                 <button class="boton boton--secundario" type="button" id="cambiar-ubicacion">Cambiar ubicación</button>
               </div>
 
-              <div class="campo">
-                <label for="f-sede">Nombre de la sede u obra <span class="opcional">(opcional)</span></label>
-                <input id="f-sede" name="sede" type="text" autocomplete="organization" placeholder="Cantera norte, parque de maquinaria">
-              </div>
-              <div class="campo">
-                <label for="f-direccion">Dirección <span class="opcional">(opcional)</span></label>
-                <input id="f-direccion" name="direccion" type="text" autocomplete="street-address" aria-describedby="a-direccion">
-                <p class="campo__ayuda" id="a-direccion">Texto libre para quien recibe la solicitud.</p>
-              </div>
-              <div class="campo">
-                <label for="f-indicaciones">Indicaciones de acceso <span class="opcional">(opcional)</span></label>
-                <input id="f-indicaciones" name="indicaciones" type="text" autocomplete="off" placeholder="Entrada de camiones, máquina junto a la nave" aria-describedby="a-indicaciones">
-                <p class="campo__ayuda" id="a-indicaciones">Cómo llegar hasta la máquina una vez en el sitio.</p>
+              <div class="ubicacion__campos">
+                <div class="campo">
+                  <label for="f-sede">Nombre de la sede u obra <span class="opcional">(opcional)</span></label>
+                  <input id="f-sede" name="sede" type="text" autocomplete="organization" placeholder="Cantera norte, parque de maquinaria">
+                </div>
+                <div class="campo">
+                  <label for="f-direccion">Dirección <span class="opcional">(opcional)</span></label>
+                  <input id="f-direccion" name="direccion" type="text" autocomplete="street-address" aria-describedby="a-direccion">
+                  <p class="campo__ayuda" id="a-direccion">Texto libre para quien recibe la solicitud.</p>
+                </div>
+                <div class="campo">
+                  <label for="f-indicaciones">Indicaciones de acceso <span class="opcional">(opcional)</span></label>
+                  <input id="f-indicaciones" name="indicaciones" type="text" autocomplete="off" placeholder="Entrada de camiones, máquina junto a la nave" aria-describedby="a-indicaciones">
+                  <p class="campo__ayuda" id="a-indicaciones">Cómo llegar hasta la máquina una vez en el sitio.</p>
+                </div>
               </div>
 
               <input type="hidden" name="latitud" id="f-latitud">
@@ -424,7 +424,7 @@
               <label for="f-comprobaciones">Comprobaciones realizadas <span class="opcional">(opcional)</span></label>
               <textarea id="f-comprobaciones" name="comprobaciones" rows="3"></textarea>
             </div>
-            <div class="campo campo--ancho">
+            <div class="campo campo--ancho campo--fotos">
               <p class="campo__titulo" id="etiqueta-fotos">Adjuntar fotos <span class="opcional">(opcional)</span></p>
               <p class="campo__ayuda" id="a-fotos">Fotos de la avería, la pieza o los códigos de fallo. JPEG, PNG o WebP, hasta 6 fotos y 10 MB en total. Se adjuntan al correo como archivos de imagen. Una foto HEIC de iPhone se convierte a JPEG; si este navegador no puede, hay que añadirla en JPEG o PNG.</p>
               <input id="f-fotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple tabindex="-1" class="visualmente-oculto">
@@ -444,8 +444,10 @@
             <input id="f-honey" name="_honey" type="text" tabindex="-1" autocomplete="off">
           </div>
 
-          <p class="formulario__pie">Los campos marcados con <span aria-hidden="true">*</span> son obligatorios.</p>
-          <button class="boton boton--primario boton--grande" type="submit" id="boton-enviar" disabled>Envío pendiente de activación</button>
+          <div class="formulario__envio">
+            <p class="formulario__pie">Los campos marcados con <span aria-hidden="true">*</span> son obligatorios.</p>
+            <button class="boton boton--oscuro boton--grande" type="submit" id="boton-enviar" disabled>Envío pendiente de activación</button>
+          </div>
         </form>
         <iframe name="marco-envio" id="marco-envio" hidden title="Envío del formulario"></iframe>
       </div>
@@ -460,34 +462,38 @@
     <div class="dialogo-mapa__cuerpo">
       <p class="dialogo-mapa__ayuda" id="dialogo-mapa-ayuda">Pulsa el mapa para marcar la máquina, arrastra el marcador o escribe las coordenadas. Buscar un municipio solo acerca la vista. El centro inicial no es una ubicación elegida. Las calles se cargan desde OpenStreetMap y necesitan conexión.</p>
       <p class="dialogo-mapa__aviso" id="aviso-mapa" role="status" hidden></p>
-      <div class="campo dialogo-mapa__busqueda">
-        <label for="buscar-municipio">Buscar municipio</label>
-        <div class="municipios-ancla">
-          <input id="buscar-municipio" type="search" role="combobox" aria-expanded="false" aria-controls="lista-municipios" aria-autocomplete="list" autocomplete="off" placeholder="Municipio, por ejemplo Zaragoza" aria-describedby="a-municipio estado-busqueda">
-          <ul class="municipios" id="lista-municipios" role="listbox" hidden></ul>
+      <div class="dialogo-mapa__herramientas">
+        <div class="campo dialogo-mapa__busqueda">
+          <label for="buscar-municipio">Buscar municipio</label>
+          <div class="municipios-ancla">
+            <input id="buscar-municipio" type="search" role="combobox" aria-expanded="false" aria-controls="lista-municipios" aria-autocomplete="list" autocomplete="off" placeholder="Municipio, por ejemplo Zaragoza" aria-describedby="a-municipio estado-busqueda">
+            <ul class="municipios" id="lista-municipios" role="listbox" hidden></ul>
+          </div>
+          <p class="campo__ayuda" id="a-municipio">Municipios de España en la península y Baleares. Si el nombre se repite, se indica la provincia o la isla.</p>
+          <p class="campo__ayuda" id="estado-busqueda" role="status"></p>
         </div>
-        <p class="campo__ayuda" id="a-municipio">Municipios de España en la península y Baleares. Si el nombre se repite, se indica la provincia o la isla.</p>
-        <p class="campo__ayuda" id="estado-busqueda" role="status"></p>
-      </div>
-      <div class="dialogo-mapa__vistas" role="group" aria-label="Vistas del mapa">
-        <button class="boton boton--secundario" type="button" id="vista-peninsula">Península</button>
-        <button class="boton boton--secundario" type="button" id="vista-baleares">Baleares</button>
-        <button class="boton boton--secundario" type="button" id="vista-todo">Ver todo</button>
+        <div class="dialogo-mapa__vistas" role="group" aria-label="Vistas del mapa">
+          <button class="boton boton--secundario boton--chico" type="button" id="vista-peninsula">Península</button>
+          <button class="boton boton--secundario boton--chico" type="button" id="vista-baleares">Baleares</button>
+          <button class="boton boton--secundario boton--chico" type="button" id="vista-todo">Ver todo</button>
+        </div>
       </div>
       <div class="dialogo-mapa__lienzo" id="lienzo-mapa" role="application" aria-label="Mapa para marcar la ubicación de la máquina"></div>
-      <div class="dialogo-mapa__geo">
-        <button class="boton boton--secundario" type="button" id="usar-ubicacion" aria-describedby="a-usar-ubicacion">Usar mi ubicación</button>
-        <p class="campo__ayuda" id="a-usar-ubicacion">Utiliza esta opción solo si estás junto a la máquina.</p>
-        <p class="dialogo-mapa__estado" id="estado-geo" role="status"></p>
-      </div>
-      <div class="dialogo-mapa__coords">
-        <div class="campo">
-          <label for="m-lat">Latitud</label>
-          <input id="m-lat" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="41.403380" aria-describedby="e-coords-modal">
+      <div class="dialogo-mapa__datos">
+        <div class="dialogo-mapa__geo">
+          <button class="boton boton--secundario" type="button" id="usar-ubicacion" aria-describedby="a-usar-ubicacion">Usar mi ubicación</button>
+          <p class="campo__ayuda" id="a-usar-ubicacion">Utiliza esta opción solo si estás junto a la máquina.</p>
+          <p class="dialogo-mapa__estado" id="estado-geo" role="status"></p>
         </div>
-        <div class="campo">
-          <label for="m-lng">Longitud</label>
-          <input id="m-lng" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="2.174030" aria-describedby="e-coords-modal">
+        <div class="dialogo-mapa__coords">
+          <div class="campo">
+            <label for="m-lat">Latitud</label>
+            <input id="m-lat" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="41.403380" aria-describedby="e-coords-modal">
+          </div>
+          <div class="campo">
+            <label for="m-lng">Longitud</label>
+            <input id="m-lng" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="2.174030" aria-describedby="e-coords-modal">
+          </div>
         </div>
       </div>
       <p class="campo__error" id="e-coords-modal"></p>
@@ -495,20 +501,13 @@
     </div>
     <div class="dialogo-mapa__acciones">
       <button class="boton boton--secundario" type="button" data-cerrar-mapa>Cancelar</button>
-      <button class="boton boton--primario" type="button" id="confirmar-mapa" disabled>Confirmar ubicación</button>
+      <button class="boton boton--oscuro" type="button" id="confirmar-mapa" disabled>Confirmar ubicación</button>
     </div>
   </dialog>
 
   <footer class="pie">
-    <div class="contenedor pie__fila">
-      <p class="pie__marca">
-        <picture>
-          <source type="image/webp" srcset="assets/img/logo-rdmp-200.webp 1x, assets/img/logo-rdmp-400.webp 2x">
-          <img class="pie__logo" src="assets/img/logo-rdmp-200.png" srcset="assets/img/logo-rdmp-400.png 2x" width="200" height="40" alt="RDMP" loading="lazy" decoding="async">
-        </picture>
-        Reparación y Diagnóstico de Maquinaria Pesada
-      </p>
-      <nav aria-label="Secundaria">
+    <div class="contenedor pie__rejilla">
+      <nav class="pie__nav" aria-label="Secundaria">
         <ul class="pie__enlaces">
           <li><a href="#servicios">Servicios</a></li>
           <li><a href="#impresion-3d">Impresión 3D</a></li>
@@ -518,6 +517,13 @@
           <li><a href="#contacto">Contacto</a></li>
         </ul>
       </nav>
+      <p class="pie__marca">
+        <picture>
+          <source type="image/webp" srcset="assets/img/logo-rdmp-200.webp 1x, assets/img/logo-rdmp-400.webp 2x">
+          <img class="pie__logo" src="assets/img/logo-rdmp-200.png" srcset="assets/img/logo-rdmp-400.png 2x" width="200" height="40" alt="RDMP" loading="lazy" decoding="async">
+        </picture>
+        Reparación y Diagnóstico de Maquinaria Pesada
+      </p>
     </div>
     <div class="contenedor pie__legal">
       <p>Las marcas y modelos que aparecen en las fotografías pertenecen a sus respectivos titulares; su presencia no implica ninguna relación comercial con RDMP.</p>

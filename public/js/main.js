@@ -17,7 +17,7 @@
   /* ---------------- Navegación móvil ---------------- */
   var boton = document.querySelector(".menu-boton");
   var nav = document.getElementById("navegacion");
-  var movil = window.matchMedia("(max-width: 1240px)");
+  var movil = window.matchMedia("(max-width: 1099px)");
   var dialogo = document.getElementById("dialogo-mapa");
 
   function cerrarMenu(devolverFoco) {
@@ -45,6 +45,27 @@
     if (!e.target.closest(".cabecera")) cerrarMenu(false);
   });
   movil.addEventListener("change", function () { cerrarMenu(false); });
+
+  /* ---------------- Cabecera que se oculta al bajar ---------------- */
+  var cabecera = document.getElementById("cabecera");
+  var ultimoScroll = window.scrollY;
+  var pendienteScroll = false;
+
+  function actualizarCabecera() {
+    pendienteScroll = false;
+    var actual = window.scrollY;
+    var bajando = actual > ultimoScroll;
+    var fijada = nav.classList.contains("abierta") || cabecera.contains(document.activeElement);
+    if (actual < 120 || !bajando || fijada) cabecera.classList.remove("oculta");
+    else cabecera.classList.add("oculta");
+    ultimoScroll = actual;
+  }
+  window.addEventListener("scroll", function () {
+    if (pendienteScroll) return;
+    pendienteScroll = true;
+    window.requestAnimationFrame(actualizarCabecera);
+  }, { passive: true });
+  cabecera.addEventListener("focusin", function () { cabecera.classList.remove("oculta"); });
 
   /* ---------------- Sección activa en el menú ---------------- */
   var enlaces = Array.prototype.slice.call(document.querySelectorAll(".navegacion__lista a"));

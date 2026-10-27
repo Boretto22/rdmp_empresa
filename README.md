@@ -141,7 +141,7 @@ Como en las fotografías aparecen marcas de fabricantes, el pie de página aclar
 
 ### Tipografías
 
-Barlow y Barlow Condensed, servidas desde `public/assets/fonts/` (sin peticiones a terceros). Licencia [SIL Open Font License 1.1](https://openfontlicense.org/), que permite su uso comercial y en webs. Se copian desde los paquetes `@fontsource/barlow` y `@fontsource/barlow-condensed` al ejecutar `npm run imagenes`.
+Barlow (400 y 600), servida desde `public/assets/fonts/` (sin peticiones a terceros). Los archivos de Barlow Condensed siguen en esa carpeta, pero el diseño actual ya no los carga. Licencia [SIL Open Font License 1.1](https://openfontlicense.org/), que permite su uso comercial y en webs. Se copian desde los paquetes `@fontsource/barlow` y `@fontsource/barlow-condensed` al ejecutar `npm run imagenes`.
 
 ## Pendiente antes de publicar
 

@@ -5,9 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Solicitud aceptada</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-  <p>FormSubmit ha aceptado la solicitud. <a href="./#contacto">Volver al formulario</a>.</p>
+<body class="pagina-enviado">
+  <main class="pagina-enviado__panel">
+    <img src="assets/img/logo-rdmp-400.png" width="400" height="80" alt="RDMP">
+    <h1>Solicitud aceptada</h1>
+    <p>FormSubmit ha aceptado la solicitud. <a href="./#contacto">Volver al formulario</a>.</p>
+  </main>
   <script>
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ origen: "rdmp", tipo: "formulario-aceptado" }, window.location.origin);
